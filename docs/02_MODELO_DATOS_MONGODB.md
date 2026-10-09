@@ -259,7 +259,82 @@ muestraSchema.index({ estado: 1, fecha_recepcion: -1 })
 
 ---
 
-## 9. Pendiente
+## 9. ✅ APLICADO EN ATLAS (2026-10-09)
+
+El equipo entregó el documento **`colecciones mongodb.txt`** en la raíz del
+proyecto: un script de `mongosh` que crea las 18 colecciones con
+**validadores `$jsonSchema`** e índices. Se aplicó tal cual.
+
+### Cómo se ejecutó
+
+`mongosh` no estaba instalado, así que se creó
+`backend/scripts/crearColecciones.mjs`, que reproduce el entorno del script
+(`db`, `use`, `print`) con el driver oficial de MongoDB.
+
+```bash
+cd backend
+npm run colecciones   # aplica colecciones mongodb.txt
+npm run seed          # ← OBLIGATORIO después: el script borra "usuarios"
+```
+
+> ⚠️ **Línea 19 del documento original:**
+> `if (db.getCollectionNames().includes(nombre)) db[nombre].drop();`
+> Borra la colección si ya existe. Por eso hay que volver a correr el seed.
+
+### Resultado
+
+**18 colecciones creadas**, todas con sus índices:
+
+| Colección | Índices |
+|---|---|
+| `muestras` | `codigo` (unique), `codigo_seguimiento` (unique), `solicitud_id`, `cliente_id`, `estado+fecha_recepcion`, `pendiente_disposicion` |
+| `usuarios` | `email` (unique) |
+| `clientes` | `numero_documento` (unique) |
+| `solicitudes` | `estado+fecha_creacion`, `cliente_id` |
+| `cotizaciones` | `numero` (unique), `solicitud_id` |
+| `pagos` | `referencia` (unique), `solicitud_id`, `cotizacion_id`, `estado+fecha_creacion` |
+| `analisis_muestras` | `muestra_id+parametro_id+numero_ejecucion` (unique), `muestra_id` |
+| `eventos_trazabilidad` | `muestra_id`, `muestra_id+visible_cliente+fecha` |
+| `incidencias` | `muestra_id` |
+| `informes` | `numero_informe` (unique), `muestra_id` |
+| `encuestas` | `token` (unique), `muestra_id` |
+| `facturas` | `numero` (unique), `solicitud_id`, `pago_id` |
+| `notificaciones` | `muestra_id`, `cliente_id`, `estado+fecha_programada` |
+| `disposiciones` | `muestra_id` (unique) |
+| `parametros_analisis` | `nombre` (unique) |
+| `cambios_fecha` | `muestra_id` |
+| `auditorias` | `entidad+entidad_id`, `fecha_creacion` |
+| `secuencias` | `_id` |
+
+Índices de `codigo` y `codigo_seguimiento` con `partialFilterExpression`, para
+permitir `null` antes de que la muestra reciba su código **sin romper el
+`unique`** — y al mismo tiempo cumplir **RNF-013** (consulta pública < 2 s).
+
+### Verificación
+
+| Prueba | Resultado |
+|---|---|
+| Colecciones creadas | ✅ 18 |
+| Login con validador `strict` activo | ✅ `{"ok":true,"mensaje":"Inicio de sesion exitoso"}` |
+| `npm run seed` restauró el admin | ✅ |
+
+### Diferencias respecto al diseño MySQL
+
+| MySQL | `colecciones mongodb.txt` | Impacto |
+|---|---|---|
+| `rotulo_pdf LONGBLOB` | `rotulo_pdf_id` → **GridFS** | RNF-016: PDF fuera de la colección, no infla los documentos |
+| `archivo LONGBLOB` (informes) | `archivo_id` → **GridFS** | Ídem |
+| `contenido LONGBLOB` (adjuntos) | `archivo_id` → **GridFS** | Ídem, respeta el máximo de 3 archivos |
+| Tabla `muestra_parametros` | `muestras.parametros_ids[]` | Una tabla puente menos |
+| Tabla `disposiciones` | sigue **separada** y 1:1 con `unique` | Coincide con el diseño original |
+| `incidencia_acciones`, `respuestas_*` | **embebidos** en `incidencias` | Menos consultas |
+| `cotizacion_items` | **embebido** en `cotizaciones.items` | Menos consultas |
+| `encuesta_respuestas` | **embebido** en `encuestas.respuestas` | 4 preguntas fijas |
+| `factura_historial` | **embebido** en `facturas.historial` | Bitácora corta |
+
+---
+
+## 10. Pendiente
 
 - [ ] Recibir las colecciones si el equipo ya tiene una versión propia y
       contrastarla con este documento

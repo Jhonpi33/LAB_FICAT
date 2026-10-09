@@ -5,6 +5,56 @@
 
 ---
 
+## 2026-10-09 · Entrada 004 — Se crearon las 18 colecciones en Atlas
+
+### Qué se hizo
+1. Se aplicó el documento del equipo **`colecciones mongodb.txt`** contra Atlas.
+2. Se crearon las **18 colecciones** con sus validadores `$jsonSchema` e índices.
+3. Se creó `backend/scripts/crearColecciones.mjs` y el comando `npm run colecciones`.
+4. Se restauró el usuario administrador y se verificó el login.
+
+### Cómo se hizo
+- El documento es un script de **`mongosh`**, que no estaba instalado en la
+  máquina. En vez de instalarlo, se creó un ejecutor en Node que reproduce el
+  entorno que el script espera (`db`, `use`, `print`) con el driver oficial.
+- **Primer intento falló** con `NamespaceExists`: el script original lanza las
+  operaciones sin orden y `createCollection("usuarios")` llegó **antes** que su
+  `drop()`. Se corrigió encadenando las operaciones en una cola secuencial.
+- Se renombró a `.mjs` porque `backend/package.json` es CommonJS (proyecto de
+  León) y el script usa `import`.
+- Al terminar, se ejecutó `npm run seed`: la línea 19 del documento
+  (`db[nombre].drop()`) **borra `usuarios`** y con ella el admin.
+- Se eliminó `pruebas`, colección residual de una prueba anterior.
+
+### Para qué se hizo
+Para que el modelo de datos deje de ser un diseño en papel y pase a existir
+físicamente en Atlas con sus reglas de integridad. Sin esto, el backend no
+tiene dónde guardar nada.
+
+### Resultados
+| Verificación | Resultado |
+|---|---|
+| Colecciones creadas | ✅ **18** |
+| Índices de `muestras` | ✅ `codigo` y `codigo_seguimiento` únicos con `partialFilterExpression` |
+| Validador `strict` en `usuarios` | ✅ activo |
+| `npm run seed` | ✅ Admin restaurado |
+| Login con validadores activos | ✅ `Inicio de sesion exitoso` |
+| Colección residual `pruebas` | ✅ eliminada |
+
+### ⚠️ Avisos
+| Aviso | Detalle |
+|---|---|
+| **El script borra colecciones existentes** | Línea 19 de `colecciones mongodb.txt`. Tras cada ejecución hay que correr `npm run seed` |
+| GridFS | `rotulo_pdf_id`, `archivo_id` (informes) y `archivo_id` (adjuntos) apuntan a GridFS, no guardan bytes en la colección — respeta RNF-016 |
+| BD todavía vacía | Solo existe el usuario admin. Las 18 colecciones tienen **0 documentos** |
+
+### Pendiente de esta entrada
+- [ ] Sembrar clientes, solicitudes, parámetros de análisis y una muestra de prueba
+- [ ] Reemplazar `src/services/laboratory.js` (mocks) por llamadas a la API
+- [ ] Ampliar el seed con las 3 cuentas de demostración
+
+---
+
 ## 2026-10-09 · Entrada 003 — Se integró el trabajo de León y el login real
 
 ### Qué se hizo
