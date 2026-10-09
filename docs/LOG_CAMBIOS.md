@@ -5,6 +5,56 @@
 
 ---
 
+## 2026-10-09 · Entrada 003 — Se integró el trabajo de León y el login real
+
+### Qué se hizo
+1. Se trajo el repositorio de León (`github.com/Jhonpi33/LAB_FICAT`).
+2. Se fusionó su `backend/` completo (94 archivos) con el frontend visual existente.
+3. Se conectó la pantalla de login con la API real (**Fase 1.8**).
+4. Se verificó el ciclo completo de autenticación contra Atlas.
+5. Se documentó en `docs/06_AUTENTICACION_LOGIN.md`.
+
+### Cómo se hizo
+- Los dos repositorios tenían **historias sin base común**, así que no era un
+  `git pull` normal: se hizo
+  `git merge leon/main --allow-unrelated-histories -X theirs`.
+  - `-X theirs` → en los conflictos de contenido **prevalece León** (él hizo
+    el backend real).
+  - Los archivos solo-existente-local (`docs/`, `src/`, `TABLAS…`, `.gitignore`)
+    **se conservan automáticamente**.
+- Se borraron los archivos míos de prueba reemplazados por los de León:
+  `backend/src/config/db.js` y `backend/src/smoke.js`.
+- `backend/.env` se reescribió con las variables que León exige
+  (`PORT`, `MONGO_URI`, `JWT_SECRET`, `JWT_EXPIRES`, `FRONTEND_URL`, `ADMIN_*`).
+- Se instaló `axios` en el frontend y se creó `src/services/api.js`.
+
+### Para qué se hizo
+Para dejar de duplicar trabajo y para que la validación de usuario ocurra en
+el servidor. Un login validado en el navegador no protege nada (RNF-003).
+
+### Resultados
+| Verificación | Resultado |
+|---|---|
+| Backend arranca y conecta Atlas | ✅ `MongoDB Atlas: conexion establecida` |
+| `npm run seed` | ✅ Admin creado en Atlas |
+| `POST /api/auth/login` | ✅ devuelve JWT |
+| `GET /api/auth/me` con token | ✅ sesión activa |
+| `GET /api/auth/me` sin token | ✅ **HTTP 401** |
+| CORS para `localhost:5174` | ✅ |
+| Login desde el navegador | ✅ → `/app/panel`, *«Buen día, Encargado»* |
+
+### ⚠️ Aviso: qué sigue siendo falso
+El **login es real**, pero el **panel todavía lee `src/mocks/data.js`**
+(Muestras activas, Cola de muestras, etc.). Sigue siendo Fase pendiente.
+
+### Pendiente de esta entrada
+- [ ] Colecciones reales de muestras/clientes y reemplazar `laboratory.js`
+- [ ] Ampliar `backend/scripts/seed.js` con las 3 cuentas de demostración
+- [ ] Push a GitHub (pendiente de decisión del equipo)
+- [ ] Arreglar `GUIA_ARRANQUE.md`: dice puerto 5173, el real es 5174
+
+---
+
 ## 2026-10-09 · Entrada 002 — Cluster de Atlas creado y backend conectado
 
 ### Qué se hizo

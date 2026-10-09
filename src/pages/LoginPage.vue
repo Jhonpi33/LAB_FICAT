@@ -14,8 +14,8 @@ const notice = route.query.aviso ? 'Inicia sesión para consultar la informació
 const demoRole = ref('editor')
 const isDevelopment = import.meta.env.DEV
 
-function login() {
-  if (auth.signIn(email.value, password.value)) router.push('/app/panel')
+async function login() {
+  if (await auth.signIn(email.value, password.value)) router.push('/app/panel')
 }
 function tryAsRole() {
   if (!import.meta.env.DEV) return
@@ -61,13 +61,14 @@ function tryAsRole() {
               <template #append><q-btn flat round dense :icon="reveal ? 'visibility_off' : 'visibility'" :aria-label="reveal ? 'Ocultar contraseña' : 'Mostrar contraseña'" @click="reveal = !reveal" /></template>
             </q-input>
             <div v-if="auth.errorMessage" class="form-error" role="alert" aria-live="assertive">{{ auth.errorMessage }}</div>
-            <q-btn type="submit" unelevated class="btn-primary full-width" size="lg" label="Ingresar" />
+            <q-btn type="submit" unelevated class="btn-primary full-width" size="lg" :label="auth.cargando ? 'Verificando…' : 'Ingresar'" :loading="auth.cargando" :disable="auth.cargando" />
           </form>
           <div class="q-mt-lg demo-note">
             <strong>Cuentas de demostración</strong>
             <div class="q-mt-xs">lab@sena.edu.co · Laboratorio2026</div>
             <div>admin@sena.edu.co · Admin2026</div>
             <div>lectura@sena.edu.co · Lectura2026</div>
+            <div class="q-mt-xs text-caption">Estas cuentas deben existir en la base de datos (ejecuta <span class="mono">npm run seed</span> en <span class="mono">backend/</span>).</div>
           </div>
           <div v-if="isDevelopment" class="q-mt-md">
             <q-select v-model="demoRole" dense outlined label="Probar como…" :options="[{label:'Encargado',value:'editor'},{label:'Administrador',value:'admin'},{label:'Usuario / Cliente',value:'reader'}]" emit-value map-options @update:model-value="tryAsRole" />

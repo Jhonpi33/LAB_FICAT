@@ -19,7 +19,7 @@ realiza un cambio relevante se crea o actualiza un documento aquí** explicando
 | 03 | `03_COLABORACION_GIT.md` | Cómo trabajan 4 personas en el mismo repo desde distintos equipos | ✅ |
 | 04 | `04_MONGODB_ATLAS.md` | Crear el cluster y conectar la BD | ✅ |
 | 05 | `05_BACKEND_EXPRESS.md` | Estructura del backend (León) | ✅ |
-| 06 | `06_AUTENTICACION_LOGIN.md` | JWT, roles, permisos y login | ⏳ Fase 1 |
+| 06 | `06_AUTENTICACION_LOGIN.md` | JWT, roles, permisos y login | ✅ |
 | 07 | `07_SEGUIMIENTO_PUBLICO.md` | Consulta por código conectada a la BD | ⏳ Fase 1 |
 | LOG | `LOG_CAMBIOS.md` | Bitácora cronológica de todo lo hecho | ✅ |
 
