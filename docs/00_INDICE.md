@@ -18,7 +18,7 @@ realiza un cambio relevante se crea o actualiza un documento aquí** explicando
 | 02 | `02_MODELO_DATOS_MONGODB.md` | De las 25 tablas MySQL a colecciones de MongoDB | ✅ |
 | 03 | `03_COLABORACION_GIT.md` | Cómo trabajan 4 personas en el mismo repo desde distintos equipos | ✅ |
 | 04 | `04_MONGODB_ATLAS.md` | Crear el cluster y conectar la BD | ✅ |
-| 05 | `05_BACKEND_EXPRESS.md` | Estructura del backend (León) | ⏳ Fase 1 |
+| 05 | `05_BACKEND_EXPRESS.md` | Estructura del backend (León) | ✅ |
 | 06 | `06_AUTENTICACION_LOGIN.md` | JWT, roles, permisos y login | ⏳ Fase 1 |
 | 07 | `07_SEGUIMIENTO_PUBLICO.md` | Consulta por código conectada a la BD | ⏳ Fase 1 |
 | LOG | `LOG_CAMBIOS.md` | Bitácora cronológica de todo lo hecho | ✅ |

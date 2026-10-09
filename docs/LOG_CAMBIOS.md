@@ -5,6 +5,51 @@
 
 ---
 
+## 2026-10-09 · Entrada 002 — Cluster de Atlas creado y backend conectado
+
+### Qué se hizo
+1. Se creó el cluster **`ClusterLaboratorio`** (plan **M0, $0/hour**) en MongoDB Atlas.
+2. Se habilitó el acceso de red **`0.0.0.0/0` permanente** para el equipo.
+3. Se creó la estructura del backend (`backend/`) con Express + Mongoose.
+4. Se verificó la conexión y la **persistencia real** de los datos.
+5. Se documentó en `docs/05_BACKEND_EXPRESS.md`.
+
+### Cómo se hizo
+- Cluster creado desde la consola de Atlas dentro de la sesión:
+  `Deploy your cluster` → se corrigió el plan por defecto (**M10 a $0.08/hora**
+  → **M0 a $0/hour**) y la región (México → **N. Virginia us-east-1**).
+- Credenciales generadas por Atlas: usuario `jhonpimiento31_db_user`.
+- Conexión probada con `backend/src/smoke.js`, que crea, lee, actualiza,
+  **se desconecta, reconecta** y confirma que el dato persistió.
+
+### Para qué se hizo
+Para que el frontend deje de leer `src/mocks/data.js` y empiece a leer y
+escribir datos reales. Sin esto ninguna fase posterior es posible.
+
+### Resultados
+| Verificación | Resultado |
+|---|---|
+| `GET /api/health` | `{"ok":true,"bd":"conectada"}` ✅ |
+| Crear / leer / actualizar en Atlas | ✅ |
+| Persistir tras reconectar | ✅ |
+| `.env` no se sube a Git | ✅ `git check-ignore` lo confirma |
+| Acceso para León, Joymar y Jaunda | ✅ `0.0.0.0/0` permanente |
+
+### ⚠️ Avisos
+| Aviso | Detalle |
+|---|---|
+| Plan correcto | El formulario proponía **M10 ($0.08/hora)**; si se creaba tal cual habría cobro. Se cambió a **M0 $0** antes de crear |
+| Sin respaldos automáticos | El plan M0 no los trae → `mongodump` manual (RNF-008) |
+| 512 MB | PDF y adjuntos deben tener límite de tamaño (RNF-016) |
+| `npm audit` | 3 altas en `braces`/`chokidar`, **solo de `nodemon`** (dev). No se aplicó `--force` porque instalaría nodemon más viejo |
+
+### Pendiente de esta entrada
+- [ ] 18 modelos Mongoose (Fase 1.2)
+- [ ] Auth con JWT (Fase 1.4)
+- [ ] Conectar login y seguimiento del frontend (Fase 1.8 y 1.9)
+
+---
+
 ## 2026-10-09 · Entrada 001 — Conocimiento base y plan de fases
 
 ### Qué se hizo
