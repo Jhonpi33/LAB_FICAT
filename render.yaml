@@ -1,0 +1,42 @@
+# Blueprint de Render: API (backend Express/Mongo) + sitio estático (frontend Quasar)
+# https://render.com/docs/blueprint-spec
+services:
+  - type: web
+    name: labficat-api
+    runtime: node
+    plan: free
+    rootDir: backend
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: MONGO_URI
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_EXPIRES
+        value: 12h
+      - key: FRONTEND_URL
+        value: https://labficat-web.onrender.com
+      - key: ADMIN_NOMBRE
+        value: Jhon Administrador
+      - key: ADMIN_EMAIL
+        value: admin@labficat.test
+      - key: ADMIN_PASSWORD
+        sync: false
+
+  # Sitio estático (Render: type: web + runtime: static)
+  - type: web
+    name: labficat-web
+    runtime: static
+    rootDir: frontend
+    buildCommand: npm install && npm run build
+    staticPublishPath: dist
+    envVars:
+      - key: VITE_API_URL
+        value: https://labficat-api.onrender.com/api
+    # SPA fallback: /login, /solicitudes... deben servir index.html
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
