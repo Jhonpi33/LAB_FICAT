@@ -1,0 +1,16 @@
+# Dependencias
+node_modules
+
+# Build
+dist
+*.local
+
+# Variables de entorno
+.env
+.env.local
+
+# Log / editor
+*.log
+.DS_Store
+.vscode/*
+!.vscode/extensions.json
