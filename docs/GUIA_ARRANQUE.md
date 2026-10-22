@@ -9,28 +9,27 @@ Cómo levantar el proyecto en local y compartirlo por internet con **Cloudflare 
 | Requisito | Cómo verificarlo | Si no lo tienes |
 |---|---|---|
 | Node.js 18+ | `node -v` | <https://nodejs.org> |
-| Dependencias instaladas | `npm install` | Ejecútalo en la raíz del proyecto |
+| Dependencias instaladas | `npm install` | Ejecútalo dentro de `frontend/` |
 | Cloudflared | `cloudflared --version` | `brew install cloudflared` |
 
-> Todo se ejecuta desde la raíz del proyecto: `Documents/SENA/LAB_FICAT`
+> El frontend vive en `Documents/SENA/LAB_FICAT/frontend` y el backend en
+> `Documents/SENA/LAB_FICAT/backend`. Los comandos de frontend se ejecutan
+> desde la carpeta `frontend/`.
 
 ---
 
 ## 1. Arrancar el servicio en local
 
 ```bash
+cd frontend
 npm run dev
 ```
 
-- Servidor local: **<http://localhost:5173>**
+- Servidor local: **<http://localhost:5174>**
 - Deja esa terminal abierta (si la cierras, se apaga).
 
-**Verificación:** abre <http://localhost:5173> y debe cargar
+**Verificación:** abre <http://localhost:5174> y debe cargar
 *"Laboratorio de alimentos · SENA"*.
-
-> ⚠️ El proyecto puede arrancar en **5174** si el 5173 está ocupado por otro
-> proceso. En ese caso revisa el puerto que imprime Vite en pantalla
-> (`➜ Local: http://localhost:XXXX/`) y usa ese número en el túnel.
 
 ---
 
@@ -39,7 +38,7 @@ npm run dev
 En una **segunda terminal**:
 
 ```bash
-cloudflared tunnel --url http://localhost:5173
+cloudflared tunnel --url http://localhost:5174
 ```
 
 Cloudflared imprimirá algo como:
@@ -64,7 +63,7 @@ npm run tunel        # o ./tunel.sh
 
 | Comando | Qué hace |
 |---|---|
-| `./tunel.sh` | Sube Vite (5173) si no vive + túnel con reintentos. Imprime la URL. |
+| `./tunel.sh` | Sube Vite (5174) si no vive + túnel con reintentos. Imprime la URL. |
 | `./tunel.sh --nuevo` | Mata el túnel actual y genera **URL nueva**. |
 | `./tunel.sh --parar` | Apaga el túnel. |
 
@@ -91,14 +90,14 @@ El selector **«Probar como…»** aparece en el login y en el menú lateral
 
 | Puerto | Uso |
 |---|---|
-| **5173** | Laboratorio SENA — el que va en el túnel |
-| 5174 | Segunda instancia / sesión paralela (no usar para compartir) |
+| **5174** | Laboratorio SENA — el que va en el túnel |
+| 4000 | Backend (API Express) |
 
 Para ver qué hay en cada puerto:
 
 ```bash
-lsof -nP -iTCP:5173 -sTCP:LISTEN
 lsof -nP -iTCP:5174 -sTCP:LISTEN
+lsof -nP -iTCP:4000 -sTCP:LISTEN
 ```
 
 ---
@@ -110,7 +109,7 @@ lsof -nP -iTCP:5174 -sTCP:LISTEN
 | URL da **502/500** | Se cayó Vite | `npm run dev` de nuevo (o `./tunel.sh`, que lo reinicia solo) |
 | URL da **Error 1033/1016** | Se cayó el túnel | `./tunel.sh --nuevo` y comparte la URL nueva |
 | La URL dejó de servir tras un rato | Las URLs `*.trycloudflare.com` son desechables: **cambian en cada reinicio** | Genera otra con `./tunel.sh --nuevo` |
-| `Port already in use` | Algo ya usa el puerto | `lsof -nP -iTCP:5173 -sTCP:LISTEN` → identifica el PID y ciérralo |
+| `Port already in use` | Algo ya usa el puerto | `lsof -nP -iTCP:5174 -sTCP:LISTEN` → identifica el PID y ciérralo |
 | Quiero apagar todo | — | `pkill -f cloudflared` y `Ctrl+C` en la terminal de Vite |
 | `cloudflared: command not found` | No está instalado | `brew install cloudflared` |
 
@@ -120,12 +119,13 @@ lsof -nP -iTCP:5174 -sTCP:LISTEN
 
 **Terminal 1 — el servicio:**
 ```bash
+cd frontend
 npm run dev
 ```
 
 **Terminal 2 — para compartir:**
 ```bash
-cloudflared tunnel --url http://localhost:5173
+cloudflared tunnel --url http://localhost:5174
 ```
 
 **O todo junto:**

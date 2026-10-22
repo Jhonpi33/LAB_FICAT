@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# tunel.sh — Levanta el LAB en el puerto 5173 y lo publica con Cloudflared.
+# tunel.sh — Levanta el LAB en el puerto 5174 y lo publica con Cloudflared.
 #
 # Uso:
 #   ./tunel.sh            Arranca Vite (si no vive) + túnel (reutiliza uno existente)
@@ -10,7 +10,7 @@
 set -u
 
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PORT=5173
+PORT=5174
 LOG_DIR="$DIR/.tunel"
 VITE_LOG="$LOG_DIR/vite.log"
 CF_LOG="$LOG_DIR/cloudflared.log"

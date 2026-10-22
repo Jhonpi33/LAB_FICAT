@@ -17,5 +17,8 @@ module.exports = {
   FRONTEND_URL: process.env.FRONTEND_URL || 'http://localhost:9000',
   ADMIN_NOMBRE: process.env.ADMIN_NOMBRE || '',
   ADMIN_EMAIL: process.env.ADMIN_EMAIL || '',
-  ADMIN_PASSWORD: process.env.ADMIN_PASSWORD || ''
+  ADMIN_PASSWORD: process.env.ADMIN_PASSWORD || '',
+  ENCARGADO_NOMBRE: process.env.ENCARGADO_NOMBRE || '',
+  ENCARGADO_EMAIL: process.env.ENCARGADO_EMAIL || '',
+  ENCARGADO_PASSWORD: process.env.ENCARGADO_PASSWORD || ''
 };
