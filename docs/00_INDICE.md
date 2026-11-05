@@ -21,6 +21,7 @@ realiza un cambio relevante se crea o actualiza un documento aquí** explicando
 | 05 | `05_BACKEND_EXPRESS.md` | Estructura del backend (León) | ✅ |
 | 06 | `06_AUTENTICACION_LOGIN.md` | JWT, roles, permisos y login | ✅ |
 | 07 | `07_SEGUIMIENTO_PUBLICO.md` | Consulta por código conectada a la BD | ⏳ Fase 1 |
+| 08 | `08_GUIA_CLONAR_EJECUTAR.md` | Cómo el equipo clona y ejecuta el proyecto (env, Atlas, arranque) | ✅ |
 | LOG | `LOG_CAMBIOS.md` | Bitácora cronológica de todo lo hecho | ✅ |
 
 ---
