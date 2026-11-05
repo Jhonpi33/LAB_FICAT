@@ -8,7 +8,7 @@ import { ok } from '../utils/responses.js';
 async function actividad(req, res, next) {
   try {
     const pedido = Number(req.query.dias) || 371;
-    const dias = Math.min(Math.max(pedido, 30), 730);
+    const dias = Math.min(Math.max(pedido, 7), 730);
     const datos = await service.actividadDiaria(dias);
     return ok(res, datos, 'Actividad obtenida correctamente');
   } catch (err) {

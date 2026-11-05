@@ -1,9 +1,15 @@
 <script setup>
 /**
  * /views/PanelView.vue
- * Dashboard glassmorphism con dinamismo: contadores animados, porcentajes
- * reales por KPI con mini-barras, gráficos animados al cargar, auto-refresco
- * cada 30 segundos e indicador "en vivo". Todo con CSS/JS puro (sin librerías).
+ * Dashboard profesional estilo SENA (verde + claro, como el login).
+ *
+ * Estructura inspirada en dashboards SaaS modernos:
+ *   encabezado con selector de período → KPIs con deltas → gráfica de área de
+ *   ingresos → donut de solicitudes → heatmap de actividad → últimas
+ *   solicitudes con filtros → muestras por estado → accesos a módulos.
+ *
+ * Los datos salen de los mismos listados que usan las vistas; aquí se cuentan,
+ * se agrupan y se comparan (últimos 30 días vs. los 30 anteriores).
  */
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 
@@ -18,84 +24,85 @@ const auth = useAuthStore()
 const general = useGeneralStore()
 const { notificarError } = useNotificar()
 
-// --- Utilidades de animación ---------------------------------------------------
-/** Anima un número de "desde" a "hasta" con easing easeOutCubic. */
+// --- Utilidades -----------------------------------------------------------------
+/** Anima un número de "desde" a "hasta" (easeOutCubic). */
 function animarNumero(desde, hasta, duracion, callback) {
   const inicio = performance.now()
+  let terminado = false
+
+  const terminar = () => {
+    if (!terminado) {
+      terminado = true
+      callback(hasta)
+    }
+  }
+
   const paso = (ahora) => {
+    if (terminado) return
     const progreso = Math.min((ahora - inicio) / duracion, 1)
     const suavizado = 1 - Math.pow(1 - progreso, 3)
     callback(Math.round(desde + (hasta - desde) * suavizado))
     if (progreso < 1) requestAnimationFrame(paso)
   }
+
   requestAnimationFrame(paso)
+
+  // Respaldo: si requestAnimationFrame no avanza (pestaña sin foco u oculta),
+  // garantizamos que el valor final se muestre igualmente.
+  setTimeout(terminar, duracion + 250)
 }
 
-/** Porcentaje seguro (evita dividir por cero). */
-const pctDe = (parte, total) => (total ? Math.round((parte / total) * 100) : 0)
+const formatPeso = (v) =>
+  Number(v).toLocaleString('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 })
 
-// --- Etiqueta legible del rol -------------------------------------------------
+const haceDias = (n) => new Date(Date.now() - n * 86400000)
+
+/** Compara dos períodos y devuelve el % de variación (null si no hay datos). */
+function deltaDe(actual, previo) {
+  if (!previo && !actual) return null
+  if (!previo) return 100
+  return Math.round(((actual - previo) / previo) * 100)
+}
+
+// --- Etiqueta del rol -----------------------------------------------------------
 const etiquetaRol = computed(() => {
   if (auth.esAdmin) return 'Administrador'
   if (auth.rol === 'encargado') return 'Encargado'
   return auth.rol || ''
 })
 
-// --- Gradientes por color de módulo -------------------------------------------
-const COLOR_GRADIENT = {
-  primary: 'linear-gradient(135deg, #66bb6a, #1b5e20)',
-  blue: 'linear-gradient(135deg, #64b5f6, #1565c0)',
-  orange: 'linear-gradient(135deg, #ffb74d, #e65100)',
-  teal: 'linear-gradient(135deg, #4db6ac, #00695c)',
-  'deep-orange': 'linear-gradient(135deg, #ff8a65, #bf360c)',
-  green: 'linear-gradient(135deg, #81c784, #2e7d32)',
-  purple: 'linear-gradient(135deg, #ba68c8, #6a1b9a)',
-  indigo: 'linear-gradient(135deg, #7986cb, #283593)',
-  cyan: 'linear-gradient(135deg, #4dd0e1, #00838f)',
-  brown: 'linear-gradient(135deg, #a1887f, #4e342e)',
-  red: 'linear-gradient(135deg, #e57373, #b71c1c)',
-  'blue-grey': 'linear-gradient(135deg, #90a4ae, #37474f)',
-  'light-blue': 'linear-gradient(135deg, #4fc3f7, #01579b)',
-}
+// --- Selector de período (define la ventana del heatmap de actividad) ------------
+const PERIODOS = [
+  { label: '7D', semanas: 1 },
+  { label: '30D', semanas: 5 },
+  { label: '90D', semanas: 13 },
+  { label: '12M', semanas: 53 },
+]
+const periodo = ref(PERIODOS[3])
 
-const gradienteDe = (color) => COLOR_GRADIENT[color] || COLOR_GRADIENT.primary
-
-// --- Accesos a módulos -------------------------------------------------------
+// --- Accesos a módulos ------------------------------------------------------------
 const accesos = [
-  { name: 'clientes', titulo: 'Clientes', descripcion: 'Quién solicita los análisis', icono: 'groups', color: 'primary', grupo: 'Gestión comercial', soloStaff: true },
-  { name: 'solicitudes', titulo: 'Solicitudes', descripcion: 'Solicitudes de servicio', icono: 'assignment', color: 'blue', grupo: 'Gestión comercial', soloStaff: true },
-  { name: 'cotizaciones', titulo: 'Cotizaciones', descripcion: 'Ofertas desde las solicitudes', icono: 'request_quote', color: 'orange', grupo: 'Gestión comercial', soloStaff: true },
-  { name: 'pagos', titulo: 'Pagos', descripcion: 'Pagos registrados', icono: 'payments', color: 'teal', grupo: 'Gestión comercial', soloStaff: true },
-  { name: 'facturas', titulo: 'Facturación', descripcion: 'Facturación electrónica · Factus', icono: 'receipt', color: 'deep-orange', grupo: 'Gestión comercial', soloStaff: true },
-  { name: 'muestras', titulo: 'Muestras', descripcion: 'Recepción e inventario', icono: 'science', color: 'green', grupo: 'Laboratorio', soloStaff: true },
-  { name: 'parametros', titulo: 'Parámetros', descripcion: 'Catálogo de análisis', icono: 'tune', color: 'purple', grupo: 'Laboratorio', soloStaff: true },
-  { name: 'resultados', titulo: 'Resultados', descripcion: 'Análisis y validación', icono: 'fact_check', color: 'indigo', grupo: 'Laboratorio', soloStaff: true },
-  { name: 'informes', titulo: 'Informes', descripcion: 'Informes de resultados', icono: 'description', color: 'cyan', grupo: 'Laboratorio', soloStaff: true },
-  { name: 'disposiciones', titulo: 'Disposición', descripcion: 'Devolución o desecho de muestras', icono: 'archive', color: 'brown', grupo: 'Laboratorio', soloStaff: true },
-  { name: 'incidencias', titulo: 'Incidencias', descripcion: 'Novedades y demoras', icono: 'report_problem', color: 'red', grupo: 'Atención al cliente', soloStaff: true },
-  { name: 'notificaciones', titulo: 'Notificaciones', descripcion: 'Bandeja de correo simulado', icono: 'mail', color: 'blue-grey', grupo: 'Atención al cliente', soloStaff: true },
-  { name: 'usuarios', titulo: 'Usuarios', descripcion: 'Cuentas del personal', icono: 'manage_accounts', color: 'primary', grupo: 'Sistema', soloAdmin: true },
-  { name: 'seguimiento', titulo: 'Consulta pública', descripcion: 'Así ve el cliente su muestra', icono: 'travel_explore', color: 'light-blue', grupo: 'Sistema' },
+  { name: 'clientes', titulo: 'Clientes', descripcion: 'Quién solicita los análisis', icono: 'groups', soloStaff: true },
+  { name: 'solicitudes', titulo: 'Solicitudes', descripcion: 'Solicitudes de servicio', icono: 'assignment', soloStaff: true },
+  { name: 'cotizaciones', titulo: 'Cotizaciones', descripcion: 'Ofertas desde las solicitudes', icono: 'request_quote', soloStaff: true },
+  { name: 'pagos', titulo: 'Pagos', descripcion: 'Pagos registrados', icono: 'payments', soloStaff: true },
+  { name: 'facturas', titulo: 'Facturación', descripcion: 'Facturación electrónica · Factus', icono: 'receipt', soloStaff: true },
+  { name: 'muestras', titulo: 'Muestras', descripcion: 'Recepción e inventario', icono: 'science', soloStaff: true },
+  { name: 'parametros', titulo: 'Parámetros', descripcion: 'Catálogo de análisis', icono: 'tune', soloStaff: true },
+  { name: 'resultados', titulo: 'Resultados', descripcion: 'Análisis y validación', icono: 'fact_check', soloStaff: true },
+  { name: 'informes', titulo: 'Informes', descripcion: 'Informes de resultados', icono: 'description', soloStaff: true },
+  { name: 'disposiciones', titulo: 'Disposición', descripcion: 'Devolución o desecho de muestras', icono: 'archive', soloStaff: true },
+  { name: 'incidencias', titulo: 'Incidencias', descripcion: 'Novedades y demoras', icono: 'report_problem', soloStaff: true },
+  { name: 'notificaciones', titulo: 'Notificaciones', descripcion: 'Bandeja de correo simulado', icono: 'mail', soloStaff: true },
+  { name: 'usuarios', titulo: 'Usuarios', descripcion: 'Cuentas del personal', icono: 'manage_accounts', soloAdmin: true },
+  { name: 'seguimiento', titulo: 'Consulta pública', descripcion: 'Así ve el cliente su muestra', icono: 'travel_explore' },
 ]
 
 const accesosVisibles = computed(() =>
   accesos.filter((a) => (!a.soloAdmin || auth.esAdmin) && (!a.soloStaff || auth.esStaff)),
 )
 
-const grupos = computed(() => {
-  const orden = []
-  const mapa = new Map()
-  for (const a of accesosVisibles.value) {
-    if (!mapa.has(a.grupo)) {
-      mapa.set(a.grupo, [])
-      orden.push(a.grupo)
-    }
-    mapa.get(a.grupo).push(a)
-  }
-  return orden.map((nombre) => ({ nombre, accesos: mapa.get(nombre) }))
-})
-
-// --- Resumen en vivo -----------------------------------------------------------
+// --- Datos en vivo ----------------------------------------------------------------
 const clientes = ref([])
 const solicitudes = ref([])
 const muestras = ref([])
@@ -105,9 +112,8 @@ const facturas = ref([])
 const cargando = ref(false)
 const error = ref(null)
 
-/** Números y porcentajes animados de cada KPI. */
+/** Números animados de cada KPI. */
 const kpiValores = ref([])
-const kpiPcts = ref([])
 
 const cargar = async (silencioso = false) => {
   if (!auth.esStaff) return
@@ -138,26 +144,18 @@ const cargar = async (silencioso = false) => {
   }
 }
 
-/** Dispara los contadores animados de valores y porcentajes. */
 function animarContadores() {
-  const tarjetas = tarjetasResumen.value
-  const previosValores = kpiValores.value
-  const previosPcts = kpiPcts.value
-
-  kpiValores.value = tarjetas.map((t, i) => previosValores[i] ?? 0)
-  kpiPcts.value = tarjetas.map((t, i) => previosPcts[i] ?? 0)
-
-  tarjetas.forEach((t, i) => {
-    animarNumero(kpiValores.value[i], t.valor, 900 + i * 90, (v) => {
+  const kpis = tarjetasResumen.value
+  const previos = kpiValores.value
+  kpiValores.value = kpis.map((k, i) => previos[i] ?? 0)
+  kpis.forEach((k, i) => {
+    animarNumero(kpiValores.value[i], k.valor, 900 + i * 90, (v) => {
       kpiValores.value[i] = v
-    })
-    animarNumero(kpiPcts.value[i], t.pct, 900 + i * 90, (v) => {
-      kpiPcts.value[i] = v
     })
   })
 }
 
-// Reloj "hace X segundos" y auto-refresco cada 30 s.
+// Reloj "hace X segundos" + auto-refresco cada 30 s.
 const haceSegundos = ref(0)
 let timerReloj = null
 let timerRefresco = null
@@ -179,109 +177,173 @@ onBeforeUnmount(() => {
   clearInterval(timerRefresco)
 })
 
-// --- Contadores ---------------------------------------------------------------
+// --- KPIs con deltas (30 días vs. los 30 anteriores) ------------------------------
 const incidenciasActivas = computed(() =>
   incidencias.value.filter((i) => ['abierta', 'en_revision'].includes(i.estado)),
 )
 
-/** KPI cards: valor total + porcentaje significativo + contexto real. */
 const tarjetasResumen = computed(() => {
-  const totalClientes = clientes.value.length
-  const totalSolicitudes = solicitudes.value.length
-  const totalMuestras = muestras.value.length
-  const totalIncidencias = incidencias.value.length
-  const totalPagos = pagos.value.length
+  const desde = haceDias(30)
+  const previoDesde = haceDias(60)
+  const hoy = new Date()
 
-  const externos = clientes.value.filter((c) => c.tipo_cliente === 'externo').length
+  const enRango = (fecha) => {
+    const f = new Date(fecha)
+    return f >= desde && f <= hoy
+  }
+  const enPrevio = (fecha) => {
+    const f = new Date(fecha)
+    return f >= previoDesde && f < desde
+  }
+
+  const solicitudes30 = solicitudes.value.filter((s) => enRango(s.fecha_creacion)).length
+  const solicitudesPrev = solicitudes.value.filter((s) => enPrevio(s.fecha_creacion)).length
+
+  const muestras30 = muestras.value.filter((m) => enRango(m.fecha_creacion)).length
+  const muestrasPrev = muestras.value.filter((m) => enPrevio(m.fecha_creacion)).length
+
+  const incidencias30 = incidencias.value.filter((i) => enRango(i.fecha_creacion)).length
+  const incidenciasPrev = incidencias.value.filter((i) => enPrevio(i.fecha_creacion)).length
+
+  const pagosConfirmados = pagos.value.filter((p) => p.estado === 'confirmado')
+  const ingresosTotales = pagosConfirmados.reduce((acc, p) => acc + (Number(p.monto) || 0), 0)
+  const ingresos30 = pagosConfirmados.filter((p) => enRango(p.fecha_creacion)).reduce((acc, p) => acc + (Number(p.monto) || 0), 0)
+  const ingresosPrev = pagosConfirmados.filter((p) => enPrevio(p.fecha_creacion)).reduce((acc, p) => acc + (Number(p.monto) || 0), 0)
+
   const pendientes = solicitudes.value.filter((s) => s.estado === 'pendiente').length
   const enAnalisis = muestras.value.filter((m) => ['en_proceso', 'en_analisis'].includes(m.estado)).length
-  const activas = incidenciasActivas.value.length
-  const confirmados = pagos.value.filter((p) => p.estado === 'confirmado').length
-  const totalFacturas = facturas.value.length
+  const enRevision = incidencias.value.filter((i) => i.estado === 'en_revision').length
 
   return [
     {
-      label: 'Clientes',
-      valor: totalClientes,
-      pct: pctDe(externos, totalClientes),
-      pctTexto: 'externos',
-      icono: 'groups',
-      ruta: 'clientes',
-      gradient: 'linear-gradient(135deg, #66bb6a, #1b5e20)',
-      contexto: `${externos} externos registrados`,
+      label: 'Ingresos',
+      valor: ingresosTotales,
+      esPeso: true,
+      icono: 'payments',
+      delta: deltaDe(ingresos30, ingresosPrev),
+      contexto: `${pagosConfirmados.length} pagos confirmados`,
+      ruta: 'pagos',
     },
     {
       label: 'Solicitudes',
-      valor: totalSolicitudes,
-      pct: pctDe(pendientes, totalSolicitudes),
-      pctTexto: 'pendientes',
+      valor: solicitudes.value.length,
       icono: 'assignment',
-      ruta: 'solicitudes',
-      gradient: 'linear-gradient(135deg, #64b5f6, #1565c0)',
+      delta: deltaDe(solicitudes30, solicitudesPrev),
       contexto: `${pendientes} pendientes por atender`,
+      ruta: 'solicitudes',
     },
     {
       label: 'Muestras',
-      valor: totalMuestras,
-      pct: pctDe(enAnalisis, totalMuestras),
-      pctTexto: 'en análisis',
+      valor: muestras.value.length,
       icono: 'science',
-      ruta: 'muestras',
-      gradient: 'linear-gradient(135deg, #4db6ac, #00695c)',
+      delta: deltaDe(muestras30, muestrasPrev),
       contexto: `${enAnalisis} en análisis ahora`,
+      ruta: 'muestras',
     },
     {
       label: 'Incidencias activas',
-      valor: activas,
-      pct: pctDe(activas, totalIncidencias),
-      pctTexto: 'del total',
+      valor: incidenciasActivas.value.length,
       icono: 'report_problem',
+      delta: deltaDe(incidencias30, incidenciasPrev),
+      contexto: `${enRevision} en revisión`,
       ruta: 'incidencias',
-      gradient: 'linear-gradient(135deg, #ffb74d, #e65100)',
-      contexto: `${incidencias.value.filter((i) => i.estado === 'en_revision').length} en revisión`,
-      pulso: activas > 0,
-    },
-    {
-      label: 'Pagos',
-      valor: totalPagos,
-      pct: pctDe(confirmados, totalPagos),
-      pctTexto: 'confirmados',
-      icono: 'payments',
-      ruta: 'pagos',
-      gradient: 'linear-gradient(135deg, #26a69a, #004d40)',
-      contexto: `${confirmados} confirmados de ${totalPagos}`,
-    },
-    {
-      label: 'Facturas',
-      valor: totalFacturas,
-      pct: pctDe(totalFacturas, confirmados),
-      pctTexto: 'emitidas',
-      icono: 'receipt',
-      ruta: 'facturas',
-      gradient: 'linear-gradient(135deg, #ff8a65, #bf360c)',
-      contexto: `${totalFacturas} emitidas de ${confirmados} pagos`,
+      alerta: incidenciasActivas.value.length > 0,
     },
   ]
 })
 
-// --- Gráfico 1: solicitudes por estado (donut SVG) ----------------------------
+const valorKpi = (kpi, i) => {
+  const v = cargando.value ? 0 : kpiValores.value[i] ?? 0
+  return kpi.esPeso ? formatPeso(v) : v
+}
+
+// --- Gráfica 1: ingresos por mes (área SVG) ---------------------------------------
+const MESES_LABEL = { 0: 'Ene', 1: 'Feb', 2: 'Mar', 3: 'Abr', 4: 'May', 5: 'Jun', 6: 'Jul', 7: 'Ago', 8: 'Sep', 9: 'Oct', 10: 'Nov', 11: 'Dic' }
+
+const ingresosPorMes = computed(() => {
+  const ahora = new Date()
+  const meses = []
+  for (let i = 5; i >= 0; i--) {
+    const fecha = new Date(ahora.getFullYear(), ahora.getMonth() - i, 1)
+    meses.push({
+      clave: `${fecha.getFullYear()}-${fecha.getMonth()}`,
+      etiqueta: MESES_LABEL[fecha.getMonth()],
+      total: 0,
+    })
+  }
+  for (const p of pagos.value) {
+    if (p.estado !== 'confirmado') continue
+    const fecha = new Date(p.fecha_creacion)
+    const clave = `${fecha.getFullYear()}-${fecha.getMonth()}`
+    const mes = meses.find((m) => m.clave === clave)
+    if (mes) mes.total += Number(p.monto) || 0
+  }
+  return meses
+})
+
+const maxIngreso = computed(() => Math.max(...ingresosPorMes.value.map((m) => m.total), 1))
+
+// Dimensiones de la gráfica
+const ANCHO = 640
+const ALTO = 220
+const PAD_X = 10
+const PAD_Y_TOP = 16
+const PAD_Y_BAJO = 30
+
+const puntosIngresos = computed(() => {
+  const datos = ingresosPorMes.value
+  const ancho = ANCHO - PAD_X * 2
+  const alto = ALTO - PAD_Y_TOP - PAD_Y_BAJO
+  return datos.map((m, i) => ({
+    ...m,
+    x: PAD_X + (datos.length === 1 ? ancho / 2 : (i * ancho) / (datos.length - 1)),
+    y: PAD_Y_TOP + alto - (m.total / maxIngreso.value) * alto,
+  }))
+})
+
+const lineaIngresos = computed(() => puntosIngresos.value.map((p) => `${p.x},${p.y}`).join(' '))
+
+const areaIngresos = computed(() => {
+  const pts = puntosIngresos.value
+  if (!pts.length) return ''
+  const base = PAD_Y_TOP + (ALTO - PAD_Y_TOP - PAD_Y_BAJO)
+  return `M ${pts[0].x} ${base} L ${pts.map((p) => `${p.x} ${p.y}`).join(' L ')} L ${pts[pts.length - 1].x} ${base} Z`
+})
+
+const ticksIngresos = computed(() => {
+  const max = maxIngreso.value
+  const alto = ALTO - PAD_Y_TOP - PAD_Y_BAJO
+  const cantidad = 4
+  return Array.from({ length: cantidad }, (_, i) => {
+    const valor = (max / (cantidad - 1)) * i
+    const y = PAD_Y_TOP + alto - (valor / max) * alto
+    return { y, label: `$${valor >= 1000 ? Math.round(valor / 1000) + 'K' : valor}` }
+  })
+})
+
+// --- Gráfica 2: solicitudes por estado (donut SVG) ---------------------------------
 const ESTADOS_SOLICITUD = [
-  { value: 'pendiente', label: 'Pendiente', color: '#bdbdbd' },
-  { value: 'cotizada', label: 'Cotizada', color: '#64b5f6' },
-  { value: 'aceptada', label: 'Aceptada', color: '#a5d6a7' },
-  { value: 'pagada', label: 'Pagada', color: '#66bb6a' },
-  { value: 'rechazada', label: 'Rechazada', color: '#ef5350' },
+  { value: 'pendiente', label: 'Pendiente', color: '#b0b7b1' },
+  { value: 'cotizada', label: 'Cotizada', color: '#81c784' },
+  { value: 'aceptada', label: 'Aceptada', color: '#4caf50' },
+  { value: 'pagada', label: 'Pagada', color: '#2e7d32' },
+  { value: 'rechazada', label: 'Rechazada', color: '#e57373' },
 ]
 
-const ESTADO_COLOR = { pendiente: 'grey-4', cotizada: 'blue-2', aceptada: 'green-2', pagada: 'green-9', rechazada: 'red-2' }
-const ESTADO_TEXTO = { pendiente: 'grey-9', cotizada: 'blue-9', aceptada: 'green-10', pagada: 'white', rechazada: 'red-10' }
+const ESTADO_CHIP = {
+  pendiente: { bg: '#f1f3f1', texto: '#5f6b61' },
+  cotizada: { bg: '#e8f5e9', texto: '#1b5e20' },
+  aceptada: { bg: '#e8f5e9', texto: '#1b5e20' },
+  pagada: { bg: '#dceddd', texto: '#144d17' },
+  rechazada: { bg: '#fdecea', texto: '#b71c1c' },
+}
 
 const distribucionSolicitudes = computed(() => {
   const total = solicitudes.value.length
   let inicio = 0
   return ESTADOS_SOLICITUD.map((e) => {
     const cantidad = solicitudes.value.filter((s) => s.estado === e.value).length
-    const pct = total ? (cantidad / total) * 100 : 0
+    const pct = total ? Math.round((cantidad / total) * 100) : 0
     const segmento = { ...e, cantidad, pct, inicio }
     inicio += pct
     return segmento
@@ -290,7 +352,7 @@ const distribucionSolicitudes = computed(() => {
 
 const totalSolicitudes = computed(() => solicitudes.value.length)
 
-// --- Gráfico 2: muestras por estado (barras horizontales) ---------------------
+// --- Muestras por estado (barras) ----------------------------------------------------
 const ETIQUETAS_MUESTRA = {
   ingresada: 'Ingresada',
   en_proceso: 'En proceso',
@@ -303,7 +365,7 @@ const ETIQUETAS_MUESTRA = {
   desechada: 'Desechada',
 }
 
-const PALETA_VERDE = ['#a5d6a7', '#81c784', '#66bb6a', '#4caf50', '#43a047', '#388e3c', '#2e7d32', '#1b5e20', '#c8e6c9']
+const PALETA_MUESTRAS = ['#2e7d32', '#43a047', '#66bb6a', '#81c784', '#a5d6a7', '#1b5e20', '#388e3c', '#4caf50', '#c8e6c9']
 
 const distribucionMuestras = computed(() => {
   const total = muestras.value.length || 1
@@ -316,79 +378,27 @@ const distribucionMuestras = computed(() => {
     .filter((f) => f.cantidad > 0)
     .map((f, i) => ({
       ...f,
-      color: PALETA_VERDE[i % PALETA_VERDE.length],
+      color: PALETA_MUESTRAS[i % PALETA_MUESTRAS.length],
       pct: Math.round((f.cantidad / total) * 100),
     }))
 })
 
-// --- Gráfico 3: ingresos confirmados por mes (últimos 6 meses) ------------------
-const formatPeso = (v) =>
-  Number(v).toLocaleString('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 })
+// --- Últimas solicitudes con filtros ---------------------------------------------------
+const filtroSolicitudes = ref('todas')
 
-const MESES_LABEL = { 0: 'Ene', 1: 'Feb', 2: 'Mar', 3: 'Abr', 4: 'May', 5: 'Jun', 6: 'Jul', 7: 'Ago', 8: 'Sep', 9: 'Oct', 10: 'Nov', 11: 'Dic' }
-
-const pagosPorMes = computed(() => {
-  const ahora = new Date()
-  const meses = []
-
-  for (let i = 5; i >= 0; i--) {
-    const fecha = new Date(ahora.getFullYear(), ahora.getMonth() - i, 1)
-    meses.push({
-      clave: `${fecha.getFullYear()}-${fecha.getMonth()}`,
-      etiqueta: MESES_LABEL[fecha.getMonth()],
-      total: 0,
-      cantidad: 0,
-    })
-  }
-
-  for (const p of pagos.value) {
-    if (p.estado !== 'confirmado') continue
-    const fecha = new Date(p.fecha_creacion)
-    const clave = `${fecha.getFullYear()}-${fecha.getMonth()}`
-    const mes = meses.find((m) => m.clave === clave)
-    if (mes) {
-      mes.total += Number(p.monto) || 0
-      mes.cantidad += 1
-    }
-  }
-
-  return meses
+const ultimasSolicitudes = computed(() => {
+  const lista = [...solicitudes.value].sort((a, b) => new Date(b.fecha_creacion) - new Date(a.fecha_creacion))
+  const filtradas = filtroSolicitudes.value === 'todas' ? lista : lista.filter((s) => s.estado === filtroSolicitudes.value)
+  return filtradas.slice(0, 8)
 })
 
-const maxIngreso = computed(() => Math.max(...pagosPorMes.value.map((m) => m.total), 1))
-
-// --- Últimas solicitudes --------------------------------------------------------
-const columnasUltimas = [
-  { name: 'cliente', label: 'Cliente', field: (row) => row.cliente_id?.nombre || '', align: 'left' },
-  { name: 'descripcion', label: 'Descripción', field: 'descripcion', align: 'left' },
-  { name: 'prioridad', label: 'Prioridad', field: 'prioridad', align: 'center' },
-  { name: 'estado', label: 'Estado', field: 'estado', align: 'center' },
-  { name: 'fecha_creacion', label: 'Fecha', field: (row) => formatDate(row.fecha_creacion), align: 'left' },
-]
-
-const ultimasSolicitudes = computed(() =>
-  [...solicitudes.value]
-    .sort((a, b) => new Date(b.fecha_creacion) - new Date(a.fecha_creacion))
-    .slice(0, 5),
-)
-
-const PRIORIDAD_COLOR = { alta: 'orange-2', media: 'blue-1', baja: 'grey-3' }
-const PRIORIDAD_TEXTO = { alta: 'orange-9', media: 'blue-9', baja: 'grey-8' }
-const PRIORIDAD_LABEL = { alta: 'Alta', media: 'Media', baja: 'Baja' }
-
-const prioridadLabel = (p) => PRIORIDAD_LABEL[p] || p
 const estadoLabel = (e) => ESTADOS_SOLICITUD.find((x) => x.value === e)?.label || e
+const prioridadLabel = (p) => ({ alta: 'Alta', media: 'Media', baja: 'Baja' }[p] || p)
+const prioridadColor = (p) => ({ alta: 'texto-alta', media: 'texto-media', baja: 'texto-baja' }[p] || 'texto-baja')
 </script>
 
 <template>
   <q-page class="pagina-panel">
-    <!-- Destellos decorativos de fondo -->
-    <div class="orbs" aria-hidden="true">
-      <span class="orb orb--1" />
-      <span class="orb orb--2" />
-      <span class="orb orb--3" />
-    </div>
-
     <div class="contenedor-app">
       <!-- Encabezado -->
       <header class="animar q-mb-lg">
@@ -399,104 +409,129 @@ const estadoLabel = (e) => ESTADOS_SOLICITUD.find((x) => x.value === e)?.label |
               <h1 class="titulo-vista style-text q-my-sm titulo-panel">Hola, {{ auth.nombreUsuario }}</h1>
               <span v-if="etiquetaRol" class="chip-rol">{{ etiquetaRol }}</span>
             </div>
-            <p class="texto-panel q-mb-none">
-              Bienvenido a LABFICAT, el sistema de gestión del laboratorio de análisis.
+            <p class="subtitulo q-mb-none">
+              Resumen del laboratorio · comparado con los 30 días anteriores
             </p>
-            <p v-if="auth.esStaff" class="texto-panel-suave text-caption q-mt-sm q-mb-none">
-              <span class="vivo">
-                <span class="vivo__punto" aria-hidden="true" />
-                Datos en vivo · hace {{ haceSegundos }} s
-              </span>
-              <span class="q-mx-xs">·</span>
-              Actualización automática cada 30 s
+            <p v-if="auth.esStaff" class="linea-viva text-caption q-mt-sm q-mb-none">
+              <span class="vivo__punto" aria-hidden="true" />
+              Datos en vivo · hace {{ haceSegundos }} s · se actualiza cada 30 s
             </p>
           </div>
 
-          <q-btn
-            v-if="auth.esStaff"
-            unelevated
-            no-caps
-            color="white"
-            text-color="green-10"
-            icon="refresh"
-            label="Actualizar"
-            :loading="cargando"
-            @click="cargar()"
-          />
+          <div v-if="auth.esStaff" class="row items-center q-gutter-sm">
+            <!-- Selector de período -->
+            <div class="segmento" role="tablist" aria-label="Período">
+              <button
+                v-for="p in PERIODOS"
+                :key="p.label"
+                type="button"
+                class="segmento__item"
+                :class="{ 'segmento__item--activo': periodo.label === p.label }"
+                @click="periodo = p"
+              >
+                {{ p.label }}
+              </button>
+            </div>
+
+            <q-btn
+              unelevated
+              no-caps
+              color="primary"
+              icon="refresh"
+              label="Actualizar"
+              :loading="cargando"
+              @click="cargar()"
+            />
+          </div>
         </div>
       </header>
 
       <!-- Aviso si la API falló -->
-      <q-banner v-if="error" dense class="aviso-error q-mb-md">
-        <template #avatar><q-icon name="error_outline" color="red-2" /></template>
+      <q-banner v-if="error" dense class="bg-red-1 text-negative q-mb-md rounded-borders">
+        <template #avatar><q-icon name="error_outline" /></template>
         {{ error }}
-        <template #action><q-btn flat dense no-caps label="Reintentar" color="red-2" @click="cargar()" /></template>
+        <template #action><q-btn flat dense no-caps label="Reintentar" @click="cargar()" /></template>
       </q-banner>
 
-      <!-- Resumen en cifras -->
+      <!-- KPIs -->
       <template v-if="auth.esStaff">
         <div class="row q-col-gutter-md q-mb-lg">
-          <div
-            class="col-6 col-sm-4 col-xl-2"
-            v-for="(tarjeta, i) in tarjetasResumen"
-            :key="tarjeta.label"
-          >
-            <q-card
-              flat
-              class="vidrio vidrio--hover kpi-card cursor-pointer animar"
-              :class="{ 'kpi-alerta': tarjeta.pulso }"
-              :style="{ animationDelay: `${80 + i * 70}ms` }"
-              :to="{ name: tarjeta.ruta }"
-            >
+          <div class="col-12 col-sm-6 col-lg-3" v-for="(kpi, i) in tarjetasResumen" :key="kpi.label">
+            <q-card flat class="tarjeta-luz kpi animar" :class="{ 'kpi--alerta': kpi.alerta }" :style="{ animationDelay: `${70 + i * 70}ms` }" :to="{ name: kpi.ruta }">
               <q-card-section>
-                <div class="row items-center justify-between no-wrap">
-                  <span class="kpi-card__icono" :style="{ background: tarjeta.gradient }">
-                    <q-icon :name="tarjeta.icono" size="22px" />
+                <div class="row items-center justify-between no-wrap q-mb-md">
+                  <span class="kpi__icono"><q-icon :name="kpi.icono" size="20px" /></span>
+                  <span v-if="kpi.delta !== null" class="delta" :class="kpi.delta > 0 ? 'delta--sube' : kpi.delta < 0 ? 'delta--baja' : 'delta--neutra'">
+                    <q-icon :name="kpi.delta > 0 ? 'arrow_upward' : kpi.delta < 0 ? 'arrow_downward' : 'remove'" size="13px" />
+                    {{ Math.abs(kpi.delta) }}%
                   </span>
-                  <q-icon name="arrow_outward" class="kpi-card__flecha" size="20px" />
+                  <span v-else class="delta delta--neutra">—</span>
                 </div>
 
-                <div class="row items-baseline justify-between no-wrap q-mt-md">
-                  <div class="kpi-card__valor">{{ cargando ? '…' : (kpiValores[i] ?? 0) }}</div>
-                  <div class="kpi-card__pct">
-                    <q-icon name="trending_up" size="14px" />
-                    {{ cargando ? '—' : `${kpiPcts[i] ?? 0}%` }}
-                  </div>
-                </div>
-
-                <div class="kpi-card__label">{{ tarjeta.label }}</div>
-
-                <div class="kpi-card__barra">
-                  <div
-                    class="kpi-card__barra-fill"
-                    :style="{ width: `${cargando ? 0 : kpiPcts[i] ?? 0}%`, background: tarjeta.gradient }"
-                  />
-                </div>
-
-                <div class="kpi-card__contexto">
-                  <span class="kpi-card__pcttexto">{{ tarjeta.pctTexto }}</span>
-                  <span>{{ tarjeta.contexto }}</span>
-                </div>
+                <div class="kpi__label">{{ kpi.label }}</div>
+                <div class="kpi__valor">{{ valorKpi(kpi, i) }}</div>
+                <div class="kpi__contexto">{{ kpi.contexto }} · vs. 30 días anteriores</div>
               </q-card-section>
             </q-card>
           </div>
         </div>
 
-        <!-- Gráficos -->
+        <!-- Gráficas principales -->
         <div class="row q-col-gutter-md q-mb-lg">
-          <!-- Donut: solicitudes por estado -->
-          <div class="col-12 col-md-5">
-            <q-card flat class="vidrio panel-vidrio full-height animar" style="animation-delay: 320ms">
+          <!-- Ingresos (área) -->
+          <div class="col-12 col-lg-7">
+            <q-card flat class="tarjeta-luz full-height animar" style="animation-delay: 340ms">
               <q-card-section>
-                <div class="titulo-seccion-panel">
-                  <q-icon name="donut_small" size="20px" />
-                  Solicitudes por estado
+                <div class="row items-center no-wrap q-mb-md">
+                  <div>
+                    <div class="titulo-seccion">Ingresos</div>
+                    <div class="subtitulo-seccion">{{ formatPeso(maxIngreso === 1 ? 0 : maxIngreso) }} máx. en los últimos 6 meses</div>
+                  </div>
+                  <q-space />
+                  <span class="chip-verde">Pagos confirmados</span>
                 </div>
+
+                <div class="grafica-scroll">
+                  <svg :viewBox="`0 0 ${ANCHO} ${ALTO}`" class="grafica-area" preserveAspectRatio="xMidYMid meet" aria-label="Gráfica de ingresos por mes">
+                    <defs>
+                      <linearGradient id="gradIngresos" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stop-color="#2e7d32" stop-opacity="0.25" />
+                        <stop offset="100%" stop-color="#2e7d32" stop-opacity="0" />
+                      </linearGradient>
+                    </defs>
+
+                    <!-- Líneas de la cuadrícula -->
+                    <g v-for="tick in ticksIngresos" :key="tick.y">
+                      <line :x1="PAD_X" :y1="tick.y" :x2="ANCHO - PAD_X" :y2="tick.y" stroke="#e9ede9" stroke-width="1" />
+                      <text :x="0" :y="tick.y + 4" font-size="10" fill="#8a978d">{{ tick.label }}</text>
+                    </g>
+
+                    <path :d="areaIngresos" fill="url(#gradIngresos)" />
+                    <polyline :points="lineaIngresos" fill="none" stroke="#2e7d32" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
+
+                    <!-- Puntos y etiquetas -->
+                    <g v-for="p in puntosIngresos" :key="p.clave">
+                      <circle :cx="p.x" :cy="p.y" r="4" fill="#2e7d32" stroke="#ffffff" stroke-width="1.5">
+                        <title>{{ p.etiqueta }}: {{ formatPeso(p.total) }}</title>
+                      </circle>
+                      <text :x="p.x" :y="ALTO - 8" font-size="11" text-anchor="middle" fill="#6b786d">{{ p.etiqueta }}</text>
+                    </g>
+                  </svg>
+                </div>
+              </q-card-section>
+            </q-card>
+          </div>
+
+          <!-- Donut: solicitudes por estado -->
+          <div class="col-12 col-lg-5">
+            <q-card flat class="tarjeta-luz full-height animar" style="animation-delay: 400ms">
+              <q-card-section>
+                <div class="titulo-seccion q-mb-md">Solicitudes por estado</div>
 
                 <div class="row items-center">
                   <div class="donut-contenedor">
                     <svg viewBox="0 0 42 42" class="donut">
-                      <circle cx="21" cy="21" r="15.9155" fill="transparent" stroke="rgba(255,255,255,0.12)" stroke-width="5" />
+                      <circle cx="21" cy="21" r="15.9155" fill="transparent" stroke="#eef1ee" stroke-width="5" />
                       <circle
                         v-for="(seg, i) in distribucionSolicitudes"
                         :key="i"
@@ -522,288 +557,165 @@ const estadoLabel = (e) => ESTADOS_SOLICITUD.find((x) => x.value === e)?.label |
                       <span class="leyenda__punto" :style="{ background: seg.color }" />
                       <span class="leyenda__label">{{ seg.label }}</span>
                       <span class="leyenda__valor">{{ seg.cantidad }}</span>
+                      <span class="leyenda__pct">{{ seg.pct }}%</span>
                     </li>
                   </ul>
                 </div>
               </q-card-section>
             </q-card>
           </div>
-
-          <!-- Barras: muestras por estado -->
-          <div class="col-12 col-md-7">
-            <q-card flat class="vidrio panel-vidrio full-height animar" style="animation-delay: 400ms">
-              <q-card-section>
-                <div class="titulo-seccion-panel">
-                  <q-icon name="science" size="20px" />
-                  Muestras por estado
-                </div>
-
-                <div v-if="distribucionMuestras.length" class="barras">
-                  <div class="barra" v-for="(m, idx) in distribucionMuestras" :key="m.value">
-                    <div class="barra__etiqueta">{{ m.label }}</div>
-                    <div class="barra__track">
-                      <div
-                        class="barra__fill"
-                        :style="{ width: `${m.pct}%`, background: m.color, transitionDelay: `${idx * 80}ms` }"
-                      />
-                    </div>
-                    <div class="barra__valor">{{ m.cantidad }}</div>
-                  </div>
-                </div>
-                <div v-else class="text-center q-py-lg texto-panel-suave">
-                  Aún no hay muestras registradas
-                </div>
-              </q-card-section>
-            </q-card>
-          </div>
         </div>
 
-        <!-- Ingresos confirmados por mes -->
-        <q-card flat class="vidrio panel-vidrio q-mb-lg animar" style="animation-delay: 440ms">
+        <!-- Actividad (heatmap) -->
+        <q-card flat class="tarjeta-luz q-mb-lg animar" style="animation-delay: 460ms">
           <q-card-section>
-            <div class="titulo-seccion-panel">
-              <q-icon name="bar_chart" size="20px" />
-              Ingresos confirmados por mes
-            </div>
-
-            <div class="grafico-meses">
-              <div class="mes" v-for="(m, idx) in pagosPorMes" :key="m.clave">
-                <div class="mes__valor">{{ formatPeso(m.total) }}</div>
-                <div class="mes__columna">
-                  <div
-                    class="mes__barra"
-                    :style="{
-                      height: `${Math.round((m.total / maxIngreso) * 100)}%`,
-                      transitionDelay: `${idx * 90}ms`,
-                    }"
-                  />
-                </div>
-                <div class="mes__etiqueta">{{ m.etiqueta }}</div>
-                <div class="mes__cantidad">{{ m.cantidad }} pago(s)</div>
-              </div>
-            </div>
-          </q-card-section>
-        </q-card>
-
-        <!-- Actividad del laboratorio (heatmap estilo GitHub) -->
-        <q-card flat class="vidrio panel-vidrio q-mb-lg animar" style="animation-delay: 460ms">
-          <q-card-section>
-            <div class="titulo-seccion-panel">
-              <q-icon name="calendar_month" size="20px" />
-              Actividad del laboratorio
-            </div>
-            <ActivityHeatmap />
+            <div class="titulo-seccion q-mb-md">Actividad del laboratorio</div>
+            <ActivityHeatmap :semanas="periodo.semanas" />
           </q-card-section>
         </q-card>
 
         <!-- Últimas solicitudes -->
-        <q-card flat class="vidrio panel-vidrio q-mb-lg animar" style="animation-delay: 480ms">
-          <q-card-section class="row items-center no-wrap">
-            <div class="titulo-seccion-panel q-mb-none">
-              <q-icon name="history" size="20px" />
-              Últimas solicitudes
+        <q-card flat class="tarjeta-luz q-mb-lg animar" style="animation-delay: 520ms">
+          <q-card-section>
+            <div class="row items-center no-wrap q-mb-md">
+              <div class="titulo-seccion q-mb-none">Últimas solicitudes</div>
+              <q-space />
+              <q-btn flat dense no-caps color="primary" icon="arrow_forward" icon-right label="Ver todas" :to="{ name: 'solicitudes' }" />
             </div>
-            <q-space />
-            <q-btn
-              flat
-              dense
-              no-caps
-              color="green-3"
-              icon="arrow_forward"
-              icon-right
-              label="Ver todas"
-              :to="{ name: 'solicitudes' }"
-            />
-          </q-card-section>
 
-          <q-card-section class="q-pt-none">
-            <q-table
-              flat
-              dark
-              hide-bottom
-              :rows="ultimasSolicitudes"
-              :columns="columnasUltimas"
-              row-key="_id"
-              no-data-label="Aún no hay solicitudes registradas"
-            >
-              <template #body-cell-descripcion="celda">
-                <q-td :props="celda" class="celda-descripcion">{{ celda.row.descripcion }}</q-td>
-              </template>
+            <!-- Filtros por estado -->
+            <div class="filtros q-mb-md">
+              <button type="button" class="filtro" :class="{ 'filtro--activo': filtroSolicitudes === 'todas' }" @click="filtroSolicitudes = 'todas'">
+                Todas
+              </button>
+              <button
+                v-for="estado in ESTADOS_SOLICITUD"
+                :key="estado.value"
+                type="button"
+                class="filtro"
+                :class="{ 'filtro--activo': filtroSolicitudes === estado.value }"
+                @click="filtroSolicitudes = estado.value"
+              >
+                {{ estado.label }}
+              </button>
+            </div>
 
-              <template #body-cell-prioridad="celda">
-                <q-td :props="celda" class="text-center">
-                  <q-badge
-                    :color="PRIORIDAD_COLOR[celda.row.prioridad] || 'grey-3'"
-                    :text-color="PRIORIDAD_TEXTO[celda.row.prioridad] || 'grey-8'"
-                    :label="prioridadLabel(celda.row.prioridad)"
-                  />
-                </q-td>
-              </template>
-
-              <template #body-cell-estado="celda">
-                <q-td :props="celda" class="text-center">
-                  <q-badge
-                    :color="ESTADO_COLOR[celda.row.estado] || 'grey-4'"
-                    :text-color="ESTADO_TEXTO[celda.row.estado] || 'grey-9'"
-                    :label="estadoLabel(celda.row.estado)"
-                  />
-                </q-td>
-              </template>
-            </q-table>
+            <!-- Tabla -->
+            <div class="tabla">
+              <div class="tabla__fila tabla__fila--head">
+                <span>Cliente</span>
+                <span>Descripción</span>
+                <span class="text-center">Prioridad</span>
+                <span class="text-center">Estado</span>
+                <span class="text-right">Fecha</span>
+              </div>
+              <div class="tabla__fila" v-for="s in ultimasSolicitudes" :key="s._id">
+                <span class="tabla__cliente">{{ s.cliente_id?.nombre || '—' }}</span>
+                <span class="tabla__desc">{{ s.descripcion }}</span>
+                <span class="text-center" :class="prioridadColor(s.prioridad)">{{ prioridadLabel(s.prioridad) }}</span>
+                <span class="text-center">
+                  <span class="chip-estado" :style="{ background: ESTADO_CHIP[s.estado]?.bg, color: ESTADO_CHIP[s.estado]?.texto }">
+                    {{ estadoLabel(s.estado) }}
+                  </span>
+                </span>
+                <span class="text-right tabla__fecha">{{ formatDate(s.fecha_creacion) }}</span>
+              </div>
+              <div v-if="!ultimasSolicitudes.length" class="tabla__vacio">No hay solicitudes con este filtro.</div>
+              <div class="tabla__pie">1–{{ ultimasSolicitudes.length }} de {{ ultimasSolicitudes.length }}</div>
+            </div>
           </q-card-section>
         </q-card>
-      </template>
 
-      <!-- Accesos a módulos, agrupados por sección -->
-      <div
-        v-for="(grupo, gi) in grupos"
-        :key="grupo.nombre"
-        class="q-mb-md animar"
-        :style="{ animationDelay: `${560 + gi * 80}ms` }"
-      >
-        <div class="grupo-titulo">{{ grupo.nombre }}</div>
+        <!-- Muestras por estado + accesos -->
         <div class="row q-col-gutter-md">
-          <div
-            class="col-12 col-sm-6 col-lg-4 col-xl-3"
-            v-for="acceso in grupo.accesos"
-            :key="acceso.name"
-          >
-            <q-card flat class="vidrio vidrio--hover modulo-card cursor-pointer" :to="{ name: acceso.name }">
-              <q-card-section class="row items-center no-wrap">
-                <q-avatar square size="42px" class="modulo-card__icono" :style="{ background: gradienteDe(acceso.color) }">
-                  <q-icon :name="acceso.icono" size="22px" color="white" />
-                </q-avatar>
-                <div class="modulo-card__texto">
-                  <div class="text-subtitle2 text-weight-bold">{{ acceso.titulo }}</div>
-                  <div class="text-caption modulo-card__desc">{{ acceso.descripcion }}</div>
+          <div class="col-12 col-lg-5">
+            <q-card flat class="tarjeta-luz full-height animar" style="animation-delay: 580ms">
+              <q-card-section>
+                <div class="titulo-seccion q-mb-md">Muestras por estado</div>
+                <div v-if="distribucionMuestras.length" class="barras">
+                  <div class="barra" v-for="(m, idx) in distribucionMuestras" :key="m.value">
+                    <div class="barra__etiqueta">{{ m.label }}</div>
+                    <div class="barra__track">
+                      <div class="barra__fill" :style="{ width: `${m.pct}%`, background: m.color, transitionDelay: `${idx * 70}ms` }" />
+                    </div>
+                    <div class="barra__valor">{{ m.cantidad }}</div>
+                  </div>
                 </div>
-                <q-icon name="chevron_right" class="modulo-card__flecha" />
+                <div v-else class="text-center q-py-lg empty-title">Aún no hay muestras registradas</div>
+              </q-card-section>
+            </q-card>
+          </div>
+
+          <div class="col-12 col-lg-7">
+            <q-card flat class="tarjeta-luz full-height animar" style="animation-delay: 640ms">
+              <q-card-section>
+                <div class="titulo-seccion q-mb-md">Accesos a módulos</div>
+                <div class="row q-col-gutter-sm">
+                  <div class="col-6 col-md-4" v-for="acceso in accesosVisibles" :key="acceso.name">
+                    <q-card flat class="modulo cursor-pointer" :to="{ name: acceso.name }">
+                      <q-card-section class="row items-center no-wrap q-pa-sm">
+                        <span class="modulo__icono"><q-icon :name="acceso.icono" size="18px" /></span>
+                        <div class="modulo__texto">
+                          <div class="text-subtitle2 text-weight-bold">{{ acceso.titulo }}</div>
+                          <div class="text-caption modulo__desc">{{ acceso.descripcion }}</div>
+                        </div>
+                      </q-card-section>
+                    </q-card>
+                  </div>
+                </div>
               </q-card-section>
             </q-card>
           </div>
         </div>
-      </div>
+      </template>
     </div>
   </q-page>
 </template>
 
 <style scoped lang="scss">
 // =============================================================================
-// Dashboard glassmorphism con dinamismo: contadores, porcentajes, gráficos
-// animados, auto-refresco y efectos de pulso. Todo CSS/JS puro.
+// Dashboard claro estilo SENA: fondo neutro, tarjetas blancas y acentos en el
+// verde de marca (#2e7d32), como el login.
 // =============================================================================
 
 .pagina-panel {
-  position: relative;
-  overflow: hidden;
   min-height: calc(100vh - 50px);
-  color: #e8f5e9;
-  background:
-    radial-gradient(900px 520px at 88% -10%, rgba(46, 125, 50, 0.5), transparent 60%),
-    radial-gradient(700px 420px at -10% 32%, rgba(38, 166, 154, 0.28), transparent 60%),
-    radial-gradient(600px 400px at 55% 115%, rgba(129, 199, 132, 0.22), transparent 65%),
-    linear-gradient(165deg, #0c2312 0%, #102d18 55%, #081710 100%);
+  background: #f6f8f6;
+  color: #212121;
 }
 
-// Destellos flotantes de fondo
-.orbs {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-}
-
-.orb {
-  position: absolute;
-  border-radius: 50%;
-  filter: blur(70px);
-  opacity: 0.45;
-  animation: flotar 14s ease-in-out infinite;
-}
-
-.orb--1 {
-  width: 340px;
-  height: 340px;
-  top: -80px;
-  right: -60px;
-  background: rgba(46, 125, 50, 0.55);
-}
-
-.orb--2 {
-  width: 260px;
-  height: 260px;
-  top: 40%;
-  left: -90px;
-  background: rgba(38, 166, 154, 0.4);
-  animation-delay: -5s;
-}
-
-.orb--3 {
-  width: 300px;
-  height: 300px;
-  bottom: -110px;
-  right: 18%;
-  background: rgba(129, 199, 132, 0.3);
-  animation-delay: -9s;
-}
-
-@keyframes flotar {
-  0%,
-  100% {
-    transform: translate(0, 0) scale(1);
-  }
-  50% {
-    transform: translate(12px, -18px) scale(1.05);
-  }
-}
-
-// --- Textos del panel ----------------------------------------------------------
+// --- Encabezado --------------------------------------------------------------
 .kicker {
   font-size: 12px;
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 1.6px;
-  color: #81c784;
+  color: #2e7d32;
 }
 
 .titulo-panel {
-  color: #ffffff;
+  color: #14261a;
 }
 
-.texto-panel {
-  color: rgba(255, 255, 255, 0.68);
+.subtitulo {
+  color: #5f6b61;
+  font-size: 14px;
 }
 
-.texto-panel-suave {
-  color: rgba(255, 255, 255, 0.5);
-}
-
-.chip-rol {
+.linea-viva {
   display: inline-flex;
   align-items: center;
-  padding: 4px 12px;
-  border-radius: 999px;
-  font-size: 12px;
-  font-weight: 700;
-  color: #c8e6c9;
-  background: rgba(102, 187, 106, 0.16);
-  border: 1px solid rgba(102, 187, 106, 0.35);
-}
-
-// Indicador "en vivo" con punto que parpadea
-.vivo {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
+  gap: 7px;
+  color: #7d8a80;
   font-weight: 600;
-  color: #a5d6a7;
 }
 
 .vivo__punto {
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: #66bb6a;
-  box-shadow: 0 0 8px #66bb6a;
+  background: #43a047;
+  box-shadow: 0 0 8px rgba(67, 160, 71, 0.6);
   animation: parpadeo 1.6s ease-in-out infinite;
 }
 
@@ -813,171 +725,174 @@ const estadoLabel = (e) => ESTADOS_SOLICITUD.find((x) => x.value === e)?.label |
     opacity: 1;
   }
   50% {
-    opacity: 0.3;
+    opacity: 0.35;
   }
 }
 
-// --- Tarjeta de vidrio base ----------------------------------------------------
-.vidrio {
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 20px;
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
-  transition:
-    transform 0.25s ease,
-    box-shadow 0.25s ease,
-    border-color 0.25s ease;
+.chip-rol {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #1b5e20;
+  background: #e8f5e9;
+  border: 1px solid #c8e6c9;
 }
 
-.vidrio--hover:hover {
-  transform: translateY(-5px);
-  border-color: rgba(255, 255, 255, 0.24);
-  box-shadow: 0 16px 42px rgba(0, 0, 0, 0.38);
+.chip-verde {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #1b5e20;
+  background: #e8f5e9;
+  border: 1px solid #c8e6c9;
 }
 
-// --- KPI cards -----------------------------------------------------------------
-.kpi-card {
+// --- Selector de período -------------------------------------------------------
+.segmento {
+  display: inline-flex;
+  background: #eef1ee;
+  border-radius: 10px;
+  padding: 3px;
+  gap: 2px;
+}
+
+.segmento__item {
+  border: 0;
+  background: transparent;
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #6b786d;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.segmento__item--activo {
+  background: #ffffff;
+  color: #1b5e20;
+  box-shadow: 0 1px 3px rgba(16, 42, 18, 0.14);
+}
+
+// --- Tarjeta base ---------------------------------------------------------------
+.tarjeta-luz {
+  background: #ffffff;
+  border: 1px solid #e4e9e4;
+  border-radius: 14px;
+  box-shadow: 0 1px 2px rgba(16, 42, 18, 0.05);
+}
+
+// --- KPIs -----------------------------------------------------------------------
+.kpi {
+  transition: box-shadow 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+
+  &:hover {
+    transform: translateY(-2px);
+    border-color: #c8e6c9;
+    box-shadow: 0 6px 18px rgba(16, 42, 18, 0.08);
+  }
+
+  &--alerta {
+    border-color: #ffe0b2;
+  }
+
   &__icono {
-    width: 44px;
-    height: 44px;
-    border-radius: 12px;
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
     display: flex;
     align-items: center;
     justify-content: center;
-    color: #fff;
+    color: #2e7d32;
+    background: #e8f5e9;
     flex-shrink: 0;
-    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.3);
-  }
-
-  &__flecha {
-    color: rgba(255, 255, 255, 0.4);
-    transition: transform 0.2s ease, color 0.2s ease;
-  }
-
-  &:hover .kpi-card__flecha {
-    transform: translate(3px, -3px);
-    color: #a5d6a7;
-  }
-
-  &__valor {
-    font-size: 30px;
-    font-weight: 800;
-    color: #fff;
-    line-height: 1.1;
-    font-variant-numeric: tabular-nums;
-  }
-
-  &__pct {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    font-size: 15px;
-    font-weight: 800;
-    color: #a5d6a7;
-    font-variant-numeric: tabular-nums;
   }
 
   &__label {
-    color: rgba(255, 255, 255, 0.72);
-    font-weight: 600;
-    font-size: 14px;
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #7d8a80;
   }
 
-  // Mini-barra de progreso del porcentaje
-  &__barra {
-    height: 6px;
-    border-radius: 999px;
-    background: rgba(255, 255, 255, 0.12);
-    margin-top: 12px;
-    overflow: hidden;
-  }
-
-  &__barra-fill {
-    height: 100%;
-    border-radius: 999px;
-    transition: width 0.9s cubic-bezier(0.22, 0.9, 0.35, 1);
+  &__valor {
+    font-size: 28px;
+    font-weight: 800;
+    color: #14261a;
+    line-height: 1.15;
+    font-variant-numeric: tabular-nums;
   }
 
   &__contexto {
-    display: flex;
-    align-items: baseline;
-    gap: 6px;
-    margin-top: 10px;
-    font-size: 12.5px;
-    color: rgba(255, 255, 255, 0.6);
-  }
-
-  &__pcttexto {
-    font-weight: 700;
-    color: #a5d6a7;
-    text-transform: uppercase;
-    font-size: 10.5px;
-    letter-spacing: 0.4px;
+    margin-top: 8px;
+    font-size: 12px;
+    color: #8a978d;
   }
 }
 
-// Pulso de alerta (incidencias activas)
-.kpi-alerta {
-  position: relative;
-}
-
-.kpi-alerta::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border-radius: 20px;
-  border: 2px solid rgba(255, 152, 0, 0.55);
-  animation: pulso 2.2s ease-out infinite;
-  pointer-events: none;
-}
-
-@keyframes pulso {
-  0% {
-    opacity: 0.9;
-    transform: scale(1);
-  }
-  70%,
-  100% {
-    opacity: 0;
-    transform: scale(1.035);
-  }
-}
-
-// --- Títulos de sección ----------------------------------------------------------
-.titulo-seccion-panel {
-  display: flex;
+.delta {
+  display: inline-flex;
   align-items: center;
-  gap: 8px;
-  font-size: 14px;
-  font-weight: 700;
-  color: #e8f5e9;
-  text-transform: uppercase;
-  letter-spacing: 0.8px;
-  margin-bottom: 16px;
-
-  .q-icon {
-    color: #81c784;
-  }
-}
-
-.grupo-titulo {
+  gap: 3px;
+  padding: 3px 8px;
+  border-radius: 999px;
   font-size: 12px;
   font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  color: rgba(255, 255, 255, 0.55);
-  border-left: 3px solid #66bb6a;
-  padding-left: 10px;
-  margin-bottom: 12px;
+  font-variant-numeric: tabular-nums;
+
+  &--sube {
+    background: #e8f5e9;
+    color: #1b5e20;
+  }
+
+  &--baja {
+    background: #fdecea;
+    color: #b71c1c;
+  }
+
+  &--neutra {
+    background: #f1f3f1;
+    color: #6b786d;
+  }
 }
 
-// --- Donut ------------------------------------------------------------------------
+// --- Títulos de sección ------------------------------------------------------------
+.titulo-seccion {
+  font-size: 15px;
+  font-weight: 800;
+  color: #14261a;
+  letter-spacing: 0.2px;
+}
+
+.subtitulo-seccion {
+  font-size: 12px;
+  color: #8a978d;
+  margin-top: 2px;
+}
+
+// --- Gráfica de área ---------------------------------------------------------------
+.grafica-scroll {
+  overflow-x: auto;
+}
+
+.grafica-area {
+  width: 100%;
+  min-width: 520px;
+  height: auto;
+}
+
+// --- Donut ----------------------------------------------------------------------------
 .donut-contenedor {
   position: relative;
-  width: 170px;
-  height: 170px;
+  width: 165px;
+  height: 165px;
   flex-shrink: 0;
 }
 
@@ -986,7 +901,6 @@ const estadoLabel = (e) => ESTADOS_SOLICITUD.find((x) => x.value === e)?.label |
   height: 100%;
 }
 
-// Los segmentos se dibujan animados cuando llegan los datos.
 .donut circle {
   transition:
     stroke-dasharray 0.9s cubic-bezier(0.22, 0.9, 0.35, 1),
@@ -1005,14 +919,14 @@ const estadoLabel = (e) => ESTADOS_SOLICITUD.find((x) => x.value === e)?.label |
 .donut-centro__numero {
   font-size: 26px;
   font-weight: 800;
-  color: #fff;
+  color: #14261a;
   line-height: 1;
   font-variant-numeric: tabular-nums;
 }
 
 .donut-centro__texto {
   font-size: 11px;
-  color: rgba(255, 255, 255, 0.6);
+  color: #8a978d;
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
@@ -1023,7 +937,7 @@ const estadoLabel = (e) => ESTADOS_SOLICITUD.find((x) => x.value === e)?.label |
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 9px;
   flex: 1;
   min-width: 0;
 
@@ -1044,35 +958,48 @@ const estadoLabel = (e) => ESTADOS_SOLICITUD.find((x) => x.value === e)?.label |
 
 .leyenda__label {
   flex: 1;
-  color: rgba(255, 255, 255, 0.75);
+  color: #4d594f;
 }
 
 .leyenda__valor {
   font-weight: 700;
-  color: #fff;
+  color: #14261a;
 }
 
-// --- Barras de muestras ------------------------------------------------------------
+.leyenda__pct {
+  width: 42px;
+  text-align: right;
+  font-size: 12px;
+  font-weight: 700;
+  color: #8a978d;
+  font-variant-numeric: tabular-nums;
+}
+
+// --- Barras de muestras ----------------------------------------------------------------
 .barras {
   display: flex;
   flex-direction: column;
   gap: 10px;
 }
+
 .barra {
   display: grid;
-  grid-template-columns: 150px 1fr 32px;
+  grid-template-columns: 140px 1fr 26px;
   align-items: center;
   gap: 10px;
   font-size: 13px;
 }
 
 .barra__etiqueta {
-  color: rgba(255, 255, 255, 0.75);
+  color: #4d594f;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .barra__track {
-  height: 10px;
-  background: rgba(255, 255, 255, 0.12);
+  height: 9px;
+  background: #eef1ee;
   border-radius: 999px;
   overflow: hidden;
 }
@@ -1086,145 +1013,184 @@ const estadoLabel = (e) => ESTADOS_SOLICITUD.find((x) => x.value === e)?.label |
 .barra__valor {
   text-align: right;
   font-weight: 700;
-  color: #fff;
+  color: #14261a;
   font-variant-numeric: tabular-nums;
 }
 
-// --- Gráfico de ingresos por mes ---------------------------------------------------
-.grafico-meses {
+// --- Tabla de solicitudes ---------------------------------------------------------------
+.filtros {
   display: flex;
-  align-items: stretch;
-  gap: 14px;
+  flex-wrap: wrap;
+  gap: 6px;
 }
 
-.mes {
+.filtro {
+  border: 1px solid #e4e9e4;
+  background: #ffffff;
+  padding: 5px 12px;
+  border-radius: 999px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #5f6b61;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.filtro:hover {
+  border-color: #c8e6c9;
+  color: #1b5e20;
+}
+
+.filtro--activo {
+  background: #e8f5e9;
+  border-color: #2e7d32;
+  color: #1b5e20;
+  font-weight: 700;
+}
+
+.tabla {
+  border: 1px solid #eef1ee;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.tabla__fila {
+  display: grid;
+  grid-template-columns: 1.2fr 2fr 0.7fr 0.8fr 0.7fr;
+  gap: 12px;
+  align-items: center;
+  padding: 11px 16px;
+  font-size: 13.5px;
+  border-bottom: 1px solid #f1f4f1;
+
+  &:last-of-type {
+    border-bottom: 0;
+  }
+
+  &--head {
+    background: #fafcfa;
+    font-size: 11.5px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    color: #8a978d;
+    border-bottom: 1px solid #e9ede9;
+  }
+
+  &:not(.tabla__fila--head):hover {
+    background: #f7faf7;
+  }
+}
+
+.tabla__cliente {
+  font-weight: 700;
+  color: #14261a;
+}
+
+.tabla__desc {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: #4d594f;
+}
+
+.tabla__fecha {
+  color: #8a978d;
+  font-variant-numeric: tabular-nums;
+}
+
+.tabla__vacio {
+  padding: 26px;
+  text-align: center;
+  color: #8a978d;
+  font-size: 13px;
+}
+
+.tabla__pie {
+  padding: 9px 16px;
+  font-size: 12px;
+  color: #8a978d;
+  border-top: 1px solid #f1f4f1;
+  background: #fafcfa;
+}
+
+.chip-estado {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 700;
+}
+
+.texto-alta {
+  color: #c2410c;
+  font-weight: 700;
+}
+
+.texto-media {
+  color: #1d4ed8;
+  font-weight: 700;
+}
+
+.texto-baja {
+  color: #6b786d;
+  font-weight: 600;
+}
+
+// --- Módulos --------------------------------------------------------------------------
+.modulo {
+  border: 1px solid #eef1ee;
+  border-radius: 12px;
+  box-shadow: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+
+  &:hover {
+    border-color: #c8e6c9;
+    box-shadow: 0 3px 10px rgba(16, 42, 18, 0.07);
+
+    .modulo__icono {
+      background: #2e7d32;
+      color: #ffffff;
+    }
+  }
+}
+
+.modulo__icono {
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #2e7d32;
+  background: #e8f5e9;
+  flex-shrink: 0;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.modulo__texto {
   flex: 1;
   min-width: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
-  text-align: center;
+  margin-left: 10px;
+  color: #14261a;
 }
 
-.mes__valor {
-  font-size: 12px;
-  font-weight: 700;
-  color: #a5d6a7;
-  white-space: nowrap;
-  font-variant-numeric: tabular-nums;
-}
-
-.mes__columna {
-  width: 100%;
-  height: 130px;
-  display: flex;
-  align-items: flex-end;
-  justify-content: center;
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: 10px;
-  padding: 6px;
-}
-
-.mes__barra {
-  width: 60%;
-  max-width: 42px;
-  border-radius: 8px 8px 4px 4px;
-  background: linear-gradient(180deg, #81c784, #2e7d32);
-  box-shadow: 0 0 14px rgba(102, 187, 106, 0.35);
-  transition: height 0.9s cubic-bezier(0.22, 0.9, 0.35, 1);
-}
-
-.mes__etiqueta {
-  font-size: 12px;
-  font-weight: 800;
-  color: rgba(255, 255, 255, 0.85);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.mes__cantidad {
-  font-size: 11px;
-  color: rgba(255, 255, 255, 0.5);
-}
-
-// --- Tabla de últimas solicitudes ---------------------------------------------------
-.panel-vidrio :deep(.q-table) {
-  background: transparent;
-}
-
-.panel-vidrio :deep(.q-table th) {
-  color: rgba(255, 255, 255, 0.62);
-  font-size: 12.5px;
-}
-
-.panel-vidrio :deep(.q-table td) {
-  color: rgba(255, 255, 255, 0.92);
-}
-
-.panel-vidrio :deep(.q-table thead tr th),
-.panel-vidrio :deep(.q-table tbody td) {
-  border-color: rgba(255, 255, 255, 0.08);
-}
-
-.celda-descripcion {
-  max-width: 280px;
+.modulo__desc {
+  color: #8a978d;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-// --- Tarjetas de acceso ---------------------------------------------------------------
-.modulo-card {
-  &__icono {
-    border-radius: 12px;
-    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.35);
-    flex-shrink: 0;
-  }
-
-  &__texto {
-    flex: 1;
-    min-width: 0;
-    color: #fff;
-    margin-left: 12px;
-  }
-
-  &__desc {
-    color: rgba(255, 255, 255, 0.6);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-
-  &__flecha {
-    color: rgba(255, 255, 255, 0.35);
-    flex-shrink: 0;
-    transition: transform 0.2s ease, color 0.2s ease;
-  }
-
-  &:hover .modulo-card__flecha {
-    transform: translateX(4px);
-    color: #a5d6a7;
-  }
-}
-
-// --- Aviso de error ---------------------------------------------------------------
-.aviso-error {
-  background: rgba(239, 83, 80, 0.12);
-  border: 1px solid rgba(239, 83, 80, 0.4);
-  color: #ffcdd2;
-  border-radius: 14px;
-}
-
-// --- Animación de entrada -------------------------------------------------------------
+// --- Animación de entrada ---------------------------------------------------------------
 .animar {
-  animation: aparecer 0.55s cubic-bezier(0.22, 0.9, 0.35, 1) both;
+  animation: aparecer 0.5s cubic-bezier(0.22, 0.9, 0.35, 1) both;
 }
 
 @keyframes aparecer {
   from {
     opacity: 0;
-    transform: translateY(14px);
+    transform: translateY(10px);
   }
   to {
     opacity: 1;
@@ -1232,39 +1198,36 @@ const estadoLabel = (e) => ESTADOS_SOLICITUD.find((x) => x.value === e)?.label |
   }
 }
 
-// --- Responsive -------------------------------------------------------------------------
+// --- Responsive --------------------------------------------------------------------------
 @media (max-width: 600px) {
   .barra {
-    grid-template-columns: 110px 1fr 26px;
+    grid-template-columns: 110px 1fr 24px;
     gap: 8px;
   }
 
-  .donut-contenedor {
-    width: 140px;
-    height: 140px;
+  .tabla__fila {
+    grid-template-columns: 1fr 1.6fr 0.8fr;
+    gap: 8px;
   }
 
-  .kpi-card__valor {
+  .tabla__fila--head span:nth-child(4),
+  .tabla__fila:not(.tabla__fila--head) span:nth-child(4) {
+    display: none;
+  }
+
+  .kpi__valor {
     font-size: 24px;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .animar,
-  .orb,
-  .vivo__punto,
-  .kpi-alerta::after {
+  .vivo__punto {
     animation: none !important;
   }
 
-  .vidrio--hover:hover {
-    transform: none;
-  }
-
   .donut circle,
-  .barra__fill,
-  .kpi-card__barra-fill,
-  .mes__barra {
+  .barra__fill {
     transition: none !important;
   }
 }

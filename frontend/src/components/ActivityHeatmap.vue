@@ -3,42 +3,49 @@
  * /components/ActivityHeatmap.vue
  * Gráfico de actividad estilo "contribution graph" de GitHub (heatmap).
  *
- * Muestra 53 semanas × 7 días; cada celda se colorea según la actividad del
- * laboratorio de ese día (eventos + solicitudes + muestras + pagos + facturas
- * + incidencias, agregados por el backend en GET /eventos/actividad).
+ * Muestra la actividad del laboratorio por día (eventos + solicitudes +
+ * muestras + pagos + facturas + incidencias, agregados en GET /eventos/actividad).
+ * La ventana la controla la prop "semanas" (7D/30D/90D/12M desde el panel).
  */
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 
 import { get } from '@/services/api.service'
 
-const SEMANAS = 53
+const props = defineProps({
+  /** Semanas visibles en la grilla (1, 5, 13 o 53). */
+  semanas: { type: Number, default: 53 },
+})
+
 const MESES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic']
 
-// Escala de intensidad (teal/cian sobre el fondo oscuro del panel).
-const NIVELES = [
-  'rgba(148, 163, 184, 0.16)', // 0 · sin actividad
-  'rgba(45, 212, 191, 0.28)', // 1
-  'rgba(45, 212, 191, 0.48)', // 2
-  'rgba(45, 212, 191, 0.72)', // 3
-  '#2dd4bf', // 4+ · mucha actividad
-]
+// Escala de intensidad en el verde de marca (claro, como el resto del panel).
+const NIVELES = ['#e9edf0', '#c8e6c9', '#81c784', '#4caf50', '#2e7d32']
 
 const cargando = ref(true)
 const error = ref(null)
 const totalActividad = ref(0)
 const conteos = ref(new Map())
-const cargaNro = ref(0) // incrementa en cada carga para re-trigger la animación
+const cargaNro = ref(0)
 
-// Rango: termina el SÁBADO de la semana actual (como GitHub) y retrocede
-// 53 semanas. Así la columna final siempre es la semana en curso.
+const etiquetaPeriodo = computed(() => {
+  if (props.semanas <= 1) return 'en la última semana'
+  if (props.semanas <= 5) return 'en el último mes'
+  if (props.semanas <= 13) return 'en los últimos 3 meses'
+  return 'en el último año'
+})
+
+// Rango: termina el SÁBADO de la semana actual y retrocede N semanas.
 const hoyUtc = new Date()
 hoyUtc.setUTCHours(12, 0, 0, 0)
 
 const fin = new Date(hoyUtc)
-fin.setUTCDate(fin.getUTCDate() + (6 - fin.getUTCDay())) // sábado de esta semana
+fin.setUTCDate(fin.getUTCDate() + (6 - fin.getUTCDay()))
 
-const inicio = new Date(fin)
-inicio.setUTCDate(inicio.getUTCDate() - (SEMANAS * 7 - 1))
+const inicio = computed(() => {
+  const d = new Date(fin)
+  d.setUTCDate(d.getUTCDate() - (props.semanas * 7 - 1))
+  return d
+})
 
 const claveDe = (f) =>
   `${f.getUTCFullYear()}-${String(f.getUTCMonth() + 1).padStart(2, '0')}-${String(f.getUTCDate()).padStart(2, '0')}`
@@ -59,11 +66,11 @@ function textoDe(fecha, cantidad) {
 
 const semanas = computed(() => {
   const lista = []
-  for (let s = 0; s < SEMANAS; s++) {
+  for (let s = 0; s < props.semanas; s++) {
     const dias = []
     for (let d = 0; d < 7; d++) {
-      const fecha = new Date(inicio)
-      fecha.setUTCDate(inicio.getUTCDate() + s * 7 + d)
+      const fecha = new Date(inicio.value)
+      fecha.setUTCDate(inicio.value.getUTCDate() + s * 7 + d)
       const clave = claveDe(fecha)
       const cantidad = conteos.value.get(clave) || 0
       const futuro = fecha.getTime() > hoyUtc.getTime()
@@ -75,7 +82,6 @@ const semanas = computed(() => {
         activa: cantidad > 0 && !futuro,
         nivel: nivelDe(cantidad),
         texto: textoDe(fecha, cantidad),
-        // Retraso en cascada (por columna + fila) para el efecto "ola".
         retraso: `${s * 14 + d * 5}ms`,
       })
     }
@@ -84,12 +90,11 @@ const semanas = computed(() => {
   return lista
 })
 
-// Meses que empiezan en cada columna (para las etiquetas superiores).
 const etiquetasMeses = computed(() => {
   const labels = []
-  for (let s = 0; s < SEMANAS; s++) {
-    const fecha = new Date(inicio)
-    fecha.setUTCDate(inicio.getUTCDate() + s * 7)
+  for (let s = 0; s < props.semanas; s++) {
+    const fecha = new Date(inicio.value)
+    fecha.setUTCDate(inicio.value.getUTCDate() + s * 7)
     const mes = fecha.getUTCMonth()
     if (!labels.length || labels[labels.length - 1].mes !== mes) labels.push({ s, nombre: MESES[mes] })
   }
@@ -100,7 +105,7 @@ const cargar = async () => {
   cargando.value = true
   error.value = null
   try {
-    const datos = await get('/eventos/actividad')
+    const datos = await get(`/eventos/actividad?dias=${props.semanas * 7}`)
     const mapa = new Map()
     let total = 0
     for (const item of datos) {
@@ -109,13 +114,16 @@ const cargar = async () => {
     }
     conteos.value = mapa
     totalActividad.value = total
-    cargaNro.value += 1 // re-trigger la animación de entrada
+    cargaNro.value += 1
   } catch (e) {
     error.value = e.mensaje
   } finally {
     cargando.value = false
   }
 }
+
+// Recarga cuando el panel cambia el período.
+watch(() => props.semanas, cargar)
 
 onMounted(cargar)
 </script>
@@ -126,7 +134,7 @@ onMounted(cargar)
     <div class="heatmap__cabecera">
       <div class="heatmap__total-box">
         <span class="heatmap__total">{{ totalActividad }}</span>
-        <span class="heatmap__total-label">actividades en el último año</span>
+        <span class="heatmap__total-label">actividades {{ etiquetaPeriodo }}</span>
       </div>
 
       <div class="heatmap__leyenda">
@@ -143,7 +151,7 @@ onMounted(cargar)
 
     <!-- Estados -->
     <div v-if="cargando" class="heatmap__estado">
-      <q-spinner-dots color="cyan-4" size="28px" />
+      <q-spinner-dots color="green-8" size="28px" />
       <span>Cargando actividad…</span>
     </div>
 
@@ -218,13 +226,13 @@ onMounted(cargar)
   &__total {
     font-size: 20px;
     font-weight: 800;
-    color: #fff;
+    color: #14261a;
     font-variant-numeric: tabular-nums;
   }
 
   &__total-label {
     font-size: 12px;
-    color: rgba(255, 255, 255, 0.55);
+    color: #8a978d;
   }
 
   &__leyenda {
@@ -235,7 +243,7 @@ onMounted(cargar)
 
   &__leyenda-texto {
     font-size: 11px;
-    color: rgba(255, 255, 255, 0.5);
+    color: #8a978d;
     margin: 0 4px;
   }
 
@@ -245,12 +253,12 @@ onMounted(cargar)
     justify-content: center;
     gap: 10px;
     min-height: 130px;
-    color: rgba(255, 255, 255, 0.55);
+    color: #8a978d;
     font-size: 13px;
   }
 
   &__estado--error {
-    color: #fca5a5;
+    color: #b71c1c;
   }
 
   &__scroll {
@@ -272,7 +280,7 @@ onMounted(cargar)
   &__mes {
     position: absolute;
     font-size: 10px;
-    color: rgba(255, 255, 255, 0.45);
+    color: #8a978d;
     text-transform: capitalize;
   }
 
@@ -289,7 +297,7 @@ onMounted(cargar)
     span {
       position: absolute;
       font-size: 10px;
-      color: rgba(255, 255, 255, 0.45);
+      color: #8a978d;
     }
   }
 
@@ -314,12 +322,10 @@ onMounted(cargar)
   }
 
   &--futuro {
-    border: 1px solid rgba(255, 255, 255, 0.06);
+    border: 1px solid #e9edf0;
     animation: none;
   }
 
-  // Celdas con actividad: además de aparecer, emiten un pulso de brillo
-  // permanente para que el gráfico siempre se vea "vivo".
   &--activa {
     animation:
       celda-aparecer 0.55s cubic-bezier(0.22, 0.9, 0.35, 1) both,
@@ -342,10 +348,10 @@ onMounted(cargar)
 @keyframes brillo-celda {
   0%,
   100% {
-    box-shadow: 0 0 0 0 rgba(45, 212, 191, 0);
+    box-shadow: 0 0 0 0 rgba(46, 125, 50, 0);
   }
   50% {
-    box-shadow: 0 0 10px 2px rgba(45, 212, 191, 0.8);
+    box-shadow: 0 0 9px 2px rgba(46, 125, 50, 0.55);
   }
 }
 
