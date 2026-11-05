@@ -1,10 +1,23 @@
-const express = require('express');
-const cors = require('cors');
-const helmet = require('helmet');
-const config = require('./config/env');
-const authRoutes = require('./routes/auth.routes');
-const usuariosRoutes = require('./routes/usuarios.routes');
-const errorHandler = require('./middlewares/errorHandler');
+import express from 'express';
+import cors from 'cors';
+import helmet from 'helmet';
+import config from './config/env.js';
+import authRoutes from './routes/auth.routes.js';
+import usuariosRoutes from './routes/usuarios.routes.js';
+import clientesRoutes from './routes/clientes.routes.js';
+import solicitudesRoutes from './routes/solicitudes.routes.js';
+import muestrasRoutes from './routes/muestras.routes.js';
+import parametrosRoutes from './routes/parametros.routes.js';
+import cotizacionesRoutes from './routes/cotizaciones.routes.js';
+import pagosRoutes from './routes/pagos.routes.js';
+import analisisRoutes from './routes/analisis.routes.js';
+import incidenciasRoutes from './routes/incidencias.routes.js';
+import publicoRoutes from './routes/publico.routes.js';
+import informesRoutes from './routes/informes.routes.js';
+import notificacionesRoutes from './routes/notificaciones.routes.js';
+import facturasRoutes from './routes/facturas.routes.js';
+import disposicionesRoutes from './routes/disposiciones.routes.js';
+import errorHandler from './middlewares/errorHandler.js';
 
 const app = express();
 
@@ -18,6 +31,19 @@ app.get('/api/health', (req, res) => {
 
 app.use('/api/auth', authRoutes);
 app.use('/api/usuarios', usuariosRoutes);
+app.use('/api/clientes', clientesRoutes);
+app.use('/api/solicitudes', solicitudesRoutes);
+app.use('/api/muestras', muestrasRoutes);
+app.use('/api/parametros', parametrosRoutes);
+app.use('/api/cotizaciones', cotizacionesRoutes);
+app.use('/api/pagos', pagosRoutes);
+app.use('/api/analisis', analisisRoutes);
+app.use('/api/incidencias', incidenciasRoutes);
+app.use('/api/publico', publicoRoutes);
+app.use('/api/informes', informesRoutes);
+app.use('/api/notificaciones', notificacionesRoutes);
+app.use('/api/facturas', facturasRoutes);
+app.use('/api/disposiciones', disposicionesRoutes);
 
 app.use((req, res) => {
   res.status(404).json({ ok: false, mensaje: 'Ruta no encontrada' });
@@ -25,4 +51,5 @@ app.use((req, res) => {
 
 app.use(errorHandler);
 
-module.exports = app;
+export default app;
+

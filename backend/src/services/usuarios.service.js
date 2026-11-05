@@ -1,6 +1,6 @@
-const mongoose = require('mongoose');
-const Usuario = require('../models/Usuario');
-const { httpError } = require('../utils/responses');
+import mongoose from 'mongoose';
+import Usuario from '../models/Usuario.js';
+import { httpError } from '../utils/responses.js';
 
 function escapar(texto) {
   return String(texto).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -86,4 +86,4 @@ async function cambiarEstado(id, activo, idSolicitante) {
   return { id: usuario._id, nombre: usuario.nombre, email: usuario.email, rol: usuario.rol, activo: usuario.activo };
 }
 
-module.exports = { listar, crear, editar, cambiarEstado };
+export { listar, crear, editar, cambiarEstado };

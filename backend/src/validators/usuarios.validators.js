@@ -1,4 +1,4 @@
-const { body } = require('express-validator');
+import { body } from 'express-validator';
 
 const nombreRule = body('nombre')
   .trim()
@@ -57,4 +57,4 @@ const estadoRules = [
     .withMessage('El campo activo debe ser booleano')
 ];
 
-module.exports = { crearRules, editarRules, estadoRules };
+export { crearRules, editarRules, estadoRules };

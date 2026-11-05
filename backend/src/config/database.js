@@ -1,5 +1,5 @@
-const mongoose = require('mongoose');
-const config = require('./env');
+import mongoose from 'mongoose';
+import config from './env.js';
 
 async function connectDB() {
   mongoose.connection.on('connected', () => console.log('MongoDB Atlas: conexion establecida'));
@@ -14,4 +14,4 @@ async function connectDB() {
   }
 }
 
-module.exports = { connectDB };
+export { connectDB };

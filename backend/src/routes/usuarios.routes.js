@@ -1,9 +1,11 @@
-const router = require('express').Router();
-const controller = require('../controllers/usuarios.controller');
-const { crearRules, editarRules, estadoRules } = require('../validators/usuarios.validators');
-const validar = require('../middlewares/validar');
-const { requireAuth } = require('../middlewares/auth');
-const { requireRole } = require('../middlewares/roles');
+import express from 'express';
+import * as controller from '../controllers/usuarios.controller.js';
+import { crearRules, editarRules, estadoRules } from '../validators/usuarios.validators.js';
+import validar from '../middlewares/validar.js';
+import { requireAuth } from '../middlewares/auth.js';
+import { requireRole } from '../middlewares/roles.js';
+
+const router = express.Router();
 
 router.use(requireAuth, requireRole('admin'));
 
@@ -12,4 +14,4 @@ router.post('/', crearRules, validar, controller.crear);
 router.put('/:id', editarRules, validar, controller.editar);
 router.patch('/:id/estado', estadoRules, validar, controller.cambiarEstado);
 
-module.exports = router;
+export default router;

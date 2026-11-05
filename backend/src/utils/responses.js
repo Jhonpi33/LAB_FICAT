@@ -16,4 +16,4 @@ function httpError(status, mensaje) {
   return err;
 }
 
-module.exports = { ok, fail, httpError };
+export { ok, fail, httpError };

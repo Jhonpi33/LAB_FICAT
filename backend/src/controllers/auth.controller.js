@@ -1,5 +1,5 @@
-const service = require('../services/auth.service');
-const { ok } = require('../utils/responses');
+import * as service from '../services/auth.service.js';
+import { ok } from '../utils/responses.js';
 
 async function registro(req, res, next) {
   try {
@@ -37,4 +37,4 @@ async function actualizarPerfil(req, res, next) {
   }
 }
 
-module.exports = { registro, login, me, actualizarPerfil };
+export { registro, login, me, actualizarPerfil };

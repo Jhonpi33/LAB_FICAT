@@ -2,6 +2,7 @@
   "name": "lab-ficat-backend",
   "version": "1.0.0",
   "description": "Backend - Sistema de Gestion para el Servicio de Analisis de Laboratorio",
+  "type": "module",
   "main": "src/server.js",
   "scripts": {
     "dev": "nodemon src/server.js",

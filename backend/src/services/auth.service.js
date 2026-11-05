@@ -1,8 +1,8 @@
-const jwt = require('jsonwebtoken');
-const mongoose = require('mongoose');
-const Usuario = require('../models/Usuario');
-const config = require('../config/env');
-const { httpError } = require('../utils/responses');
+import jwt from 'jsonwebtoken';
+import mongoose from 'mongoose';
+import Usuario from '../models/Usuario.js';
+import config from '../config/env.js';
+import { httpError } from '../utils/responses.js';
 
 function datosPublicos(u) {
   return {
@@ -79,4 +79,4 @@ async function actualizarPerfil(id, data) {
   return datosPublicos(usuario);
 }
 
-module.exports = { registro, login, me, actualizarPerfil };
+export { registro, login, me, actualizarPerfil };

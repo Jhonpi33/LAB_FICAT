@@ -1,36 +1,65 @@
-const mongoose = require('mongoose');
-const config = require('../src/config/env');
-const { connectDB } = require('../src/config/database');
-const Usuario = require('../src/models/Usuario');
+import mongoose from 'mongoose';
+import { connectDB } from '../src/config/database.js';
+import Usuario from '../src/models/Usuario.js';
 
-async function run() {
-  const { ADMIN_NOMBRE, ADMIN_EMAIL, ADMIN_PASSWORD } = config;
-
-  if (!ADMIN_NOMBRE || !ADMIN_EMAIL || !ADMIN_PASSWORD) {
-    console.error('Faltan ADMIN_NOMBRE, ADMIN_EMAIL o ADMIN_PASSWORD en el archivo .env');
-    process.exit(1);
+// Cuentas de demostración que muestra el login del frontend
+// (src/pages/LoginPage.vue). Deben coincidir exactamente con ese diseño
+// para que el botón "Probar como…" y las notas de demo funcionen.
+const CUENTAS = [
+  {
+    nombre: 'Encargado',
+    email: 'lab@sena.edu.co',
+    password: 'Laboratorio2026',
+    rol: 'encargado',
+    activo: true,
+    permiso_editar: true,
+    permiso_eliminar: false
+  },
+  {
+    nombre: 'Administrador',
+    email: 'admin@sena.edu.co',
+    password: 'Admin2026',
+    rol: 'admin',
+    activo: true,
+    permiso_editar: true,
+    permiso_eliminar: true
+  },
+  {
+    nombre: 'Usuario Cliente',
+    email: 'lectura@sena.edu.co',
+    password: 'Lectura2026',
+    rol: 'usuario',
+    activo: true,
+    permiso_editar: false,
+    permiso_eliminar: false
   }
+];
 
-  await connectDB();
-
-  const existe = await Usuario.findOne({ email: ADMIN_EMAIL.toLowerCase() });
+// Crea la cuenta si no existe; si existe, la actualiza (rol, permisos y
+// contraseña). La contraseña se hashea en el hook pre('save') del modelo.
+async function upsertCuenta({ email, password, ...datos }) {
+  const existe = await Usuario.findOne({ email });
 
   if (existe) {
-    console.log('El admin ya existe');
+    Object.assign(existe, datos, { eliminado: false });
+    existe.password = password;
+    await existe.save();
+    console.log(`Actualizada: ${email} (${datos.rol})`);
   } else {
-    await Usuario.create({
-      nombre: ADMIN_NOMBRE,
-      email: ADMIN_EMAIL,
-      password: ADMIN_PASSWORD,
-      rol: 'admin',
-      activo: true,
-      permiso_editar: true,
-      permiso_eliminar: true
-    });
-    console.log('Admin creado correctamente');
+    await Usuario.create({ email, password, ...datos });
+    console.log(`Creada: ${email} (${datos.rol})`);
+  }
+}
+
+async function run() {
+  await connectDB();
+
+  for (const cuenta of CUENTAS) {
+    await upsertCuenta(cuenta);
   }
 
   await mongoose.disconnect();
+  console.log('Semilla finalizada.');
 }
 
 run().catch((err) => {

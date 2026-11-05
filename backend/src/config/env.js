@@ -1,4 +1,4 @@
-require('dotenv').config();
+import 'dotenv/config';
 
 const requeridas = ['MONGO_URI', 'JWT_SECRET'];
 const faltantes = requeridas.filter((v) => !process.env[v]);
@@ -9,7 +9,7 @@ if (faltantes.length > 0) {
   process.exit(1);
 }
 
-module.exports = {
+export default {
   PORT: process.env.PORT || 3000,
   MONGO_URI: process.env.MONGO_URI,
   JWT_SECRET: process.env.JWT_SECRET,

@@ -1,5 +1,5 @@
-const jwt = require('jsonwebtoken');
-const config = require('../config/env');
+import jwt from 'jsonwebtoken';
+import config from '../config/env.js';
 
 function requireAuth(req, res, next) {
   const header = req.headers.authorization || '';
@@ -18,4 +18,4 @@ function requireAuth(req, res, next) {
   }
 }
 
-module.exports = { requireAuth };
+export { requireAuth };

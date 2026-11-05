@@ -1,5 +1,5 @@
-const service = require('../services/usuarios.service');
-const { ok } = require('../utils/responses');
+import * as service from '../services/usuarios.service.js';
+import { ok } from '../utils/responses.js';
 
 async function listar(req, res, next) {
   try {
@@ -37,4 +37,4 @@ async function cambiarEstado(req, res, next) {
   }
 }
 
-module.exports = { listar, crear, editar, cambiarEstado };
+export { listar, crear, editar, cambiarEstado };
