@@ -9,16 +9,18 @@ Cómo levantar el proyecto en local y compartirlo por internet con **Cloudflare 
 | Requisito | Cómo verificarlo | Si no lo tienes |
 |---|---|---|
 | Node.js 18+ | `node -v` | <https://nodejs.org> |
-| Dependencias instaladas | `npm install` | Ejecútalo en la raíz del proyecto |
+| Dependencias instaladas | `npm install` | Ejecútalo en `backend/` y en `frontend/` |
 | Cloudflared | `cloudflared --version` | `brew install cloudflared` |
 
-> Todo se ejecuta desde la raíz del proyecto: `Documents/SENA/LAB_FICAT`
+> Estructura: el **backend** vive en `backend/` y el **frontend** en `frontend/`.
+> Cada uno se ejecuta desde su propia carpeta.
 
 ---
 
 ## 1. Arrancar el servicio en local
 
 ```bash
+cd frontend
 npm run dev
 ```
 
@@ -59,7 +61,8 @@ cargar la misma app.
 ## 3. Opción rápida: todo en un solo comando
 
 ```bash
-npm run tunel        # o ./tunel.sh
+cd frontend
+npm run tunel        # o ./tunel.sh desde la raíz
 ```
 
 | Comando | Qué hace |
@@ -107,7 +110,7 @@ lsof -nP -iTCP:5174 -sTCP:LISTEN
 
 | Síntoma | Causa | Solución |
 |---|---|---|
-| URL da **502/500** | Se cayó Vite | `npm run dev` de nuevo (o `./tunel.sh`, que lo reinicia solo) |
+| URL da **502/500** | Se cayó Vite | `cd frontend && npm run dev` de nuevo (o `./tunel.sh`, que lo reinicia solo) |
 | URL da **Error 1033/1016** | Se cayó el túnel | `./tunel.sh --nuevo` y comparte la URL nueva |
 | La URL dejó de servir tras un rato | Las URLs `*.trycloudflare.com` son desechables: **cambian en cada reinicio** | Genera otra con `./tunel.sh --nuevo` |
 | `Port already in use` | Algo ya usa el puerto | `lsof -nP -iTCP:5173 -sTCP:LISTEN` → identifica el PID y ciérralo |
@@ -120,6 +123,7 @@ lsof -nP -iTCP:5174 -sTCP:LISTEN
 
 **Terminal 1 — el servicio:**
 ```bash
+cd frontend
 npm run dev
 ```
 
@@ -130,6 +134,7 @@ cloudflared tunnel --url http://localhost:5173
 
 **O todo junto:**
 ```bash
+cd frontend
 npm run tunel
 ```
 

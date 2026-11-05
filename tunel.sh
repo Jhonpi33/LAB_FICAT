@@ -26,7 +26,7 @@ server_up() {
 
 start_vite() {
   echo "▶ Iniciando Vite en el puerto ${PORT}… (log: ${VITE_LOG})"
-  (cd "$DIR" && exec npx vite --host 0.0.0.0 --port "$PORT" --strictPort) >>"$VITE_LOG" 2>&1 &
+  (cd "$DIR/frontend" && exec npx vite --host 0.0.0.0 --port "$PORT" --strictPort) >>"$VITE_LOG" 2>&1 &
   VITE_PID=$!
   for _ in $(seq 1 30); do server_up && return 0; sleep 1; done
   echo "✗ Vite no arrancó en ${PORT}. Revisa ${VITE_LOG}"
@@ -101,7 +101,7 @@ trap stop_all INT TERM
     while kill -0 "$cf" 2>/dev/null; do
       if ! curl -s -o /dev/null --max-time 3 "http://localhost:${PORT}/"; then
         echo "⚠️  El servidor en ${PORT} dejó de responder; reiniciando Vite…"
-        (cd "$DIR" && exec npx vite --host 0.0.0.0 --port "$PORT" --strictPort) >>"$VITE_LOG" 2>&1 &
+        (cd "$DIR/frontend" && exec npx vite --host 0.0.0.0 --port "$PORT" --strictPort) >>"$VITE_LOG" 2>&1 &
         VITE_MIO=$!
         export VITE_MIO
         for _ in $(seq 1 30); do server_up && break; sleep 1; done
