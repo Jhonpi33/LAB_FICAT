@@ -13,7 +13,7 @@
  */
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 
-import ActivityHeatmap from '@/components/ActivityHeatmap.vue'
+import ActivitySkyline from '@/components/ActivitySkyline.vue'
 import { get } from '@/services/api.service'
 import { useAuthStore } from '@/store/Auth'
 import { useGeneralStore } from '@/store/General'
@@ -570,7 +570,7 @@ const prioridadColor = (p) => ({ alta: 'texto-alta', media: 'texto-media', baja:
         <q-card flat class="tarjeta-luz q-mb-lg animar" style="animation-delay: 460ms">
           <q-card-section>
             <div class="titulo-seccion q-mb-md">Actividad del laboratorio</div>
-            <ActivityHeatmap :semanas="periodo.semanas" />
+            <ActivitySkyline :semanas="periodo.semanas" />
           </q-card-section>
         </q-card>
 
