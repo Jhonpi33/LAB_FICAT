@@ -1,0 +1,446 @@
+// =============================================================================
+// /styles/main.scss
+// Estilos GLOBALES de la aplicación. Se importa una sola vez en main.js.
+// Sigue la guía visual del Laboratorio SENA (verde de marca #2e7d32).
+//
+// Si un estilo solo afecta a un componente, NO va aquí: va en el <style scoped>
+// de ese componente. Aquí solo lo que se repite en toda la app.
+// =============================================================================
+
+@use './variables' as *;
+
+// =============================================================================
+// 1. TOKENS
+// Base de la identidad visual. Se apoyan en --q-primary, la variable que Quasar
+// genera a partir de $primary (ver variables.scss): UNA sola fuente de verdad.
+// =============================================================================
+:root {
+  --color_button: var(--q-primary, #2e7d32);
+  --color_box: var(--q-primary, #2e7d32);
+  --color_header: var(--q-primary, #2e7d32);
+  --color_input: var(--q-primary, #2e7d32);
+
+  // Verde propio de las cabeceras de card.
+  --color_card: #{$verde-card};
+
+  --color_text_card: white;
+  --color_text_button: white;
+  --color_button_closed: black;
+  --color_tooltip: #d4cece;
+}
+
+// =============================================================================
+// 2. BASE
+// =============================================================================
+body {
+  background-color: $color-fondo-app;
+  font-family: 'Roboto', 'Segoe UI', sans-serif;
+  color: $texto-principal;
+}
+
+// =============================================================================
+// 3. TIPOGRAFÍA
+// =============================================================================
+.style-text {
+  text-transform: capitalize !important;
+}
+
+.titleReport {
+  font-size: 26px;
+  font-weight: 600;
+}
+
+.data-label {
+  font-size: 13px;
+  font-weight: 700;
+  color: $texto-fuerte;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 5px;
+  padding-left: 8px;
+  border-left: 3px solid var(--color_button);
+}
+
+.data-value {
+  font-size: 16px;
+  color: #111111;
+  line-height: 1.5;
+}
+
+.texto-suave {
+  color: $color-texto-suave;
+}
+
+.muted {
+  color: $color-texto-suave;
+}
+
+.mono {
+  font-family: 'Roboto Mono', 'IBM Plex Mono', monospace;
+}
+
+// =============================================================================
+// 4. ESTRUCTURA
+// =============================================================================
+.contenedor-app {
+  width: 100%;
+  max-width: $ancho-maximo-contenido;
+  margin: 0 auto;
+  padding: 24px 16px 48px;
+}
+
+.titulo-vista {
+  font-size: 2.125rem;
+  font-weight: 700;
+  line-height: 1.2;
+  margin: 0;
+  text-transform: capitalize;
+}
+
+.linea-titulo {
+  width: 83%;
+  height: 2px;
+  border: 0;
+  margin: 12px 0 0;
+  background-color: var(--color_button);
+}
+
+// =============================================================================
+// 5. TARJETAS
+// =============================================================================
+.tarjeta {
+  border-radius: $radio-tarjeta;
+  border: 1px solid $color-borde;
+  background: #fff;
+  box-shadow: none;
+  transition: background 0.18s ease, border-color 0.18s ease;
+}
+
+.tarjeta-hover:hover {
+  background-color: $verde-suave;
+  border-color: $verde-hover;
+}
+
+.result-card {
+  border-radius: $radio-tarjeta;
+  transition: box-shadow 0.15s ease, transform 0.15s ease;
+
+  &:hover {
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12);
+    transform: translateY(-1px);
+  }
+}
+
+.card-header {
+  background-color: var(--color_card);
+  color: var(--color_text_card);
+  border-radius: $radio-tarjeta $radio-tarjeta 0 0;
+}
+
+// =============================================================================
+// 6. SECTION BOX
+// =============================================================================
+.section-box {
+  border: 1.5px solid color-mix(in srgb, var(--color_button) 35%, transparent);
+  border-radius: 10px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.section-box__title {
+  background-color: color-mix(in srgb, var(--color_button) 10%, white);
+  color: var(--color_button);
+  font-size: 15px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 1.1px;
+  padding: 11px 16px;
+  border-bottom: 3px solid var(--color_button);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+}
+
+.section-header {
+  background-color: color-mix(in srgb, var(--color_button) 10%, white);
+  transition: background 0.2s;
+
+  &:hover {
+    background-color: color-mix(in srgb, var(--color_button) 20%, white);
+  }
+}
+
+// =============================================================================
+// 7. BOTONES
+// =============================================================================
+.style-btn {
+  background-color: var(--color_button) !important;
+  color: var(--color_text_button) !important;
+}
+
+.btn-primary {
+  background: var(--q-primary) !important;
+  color: #fff !important;
+}
+
+.btn-cancel {
+  min-width: 120px;
+}
+
+.btn-ok {
+  min-width: 220px;
+}
+
+.action-secondary {
+  opacity: 0.85;
+  transition: all 0.2s ease;
+
+  &:hover {
+    opacity: 1;
+    background-color: rgba(0, 0, 0, 0.05) !important;
+    transform: scale(1.1);
+  }
+}
+
+// =============================================================================
+// 8. DIÁLOGOS
+// =============================================================================
+.dialog-card {
+  width: 520px; // formulario pequeño; 700px para uno mediano
+  max-width: 95vw;
+  border-radius: $radio-dialogo;
+  overflow: hidden;
+}
+
+.dialog-title {
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+// =============================================================================
+// 9. MENÚ LATERAL
+// =============================================================================
+.enlace-menu {
+  border-radius: 12px;
+  margin: 2px 8px;
+
+  &.router-link-active {
+    background-color: var(--color_button);
+    color: white;
+    font-weight: 600;
+  }
+}
+
+// =============================================================================
+// 10. TABLAS
+// =============================================================================
+.my-sticky-header-table {
+  height: 60vh;
+
+  .q-table__top,
+  .q-table__bottom,
+  thead tr:first-child th {
+    background-color: white;
+    color: black;
+    font-weight: 600;
+    font-size: 13px;
+  }
+
+  tbody td {
+    font-size: 14px;
+  }
+
+  thead tr th {
+    position: sticky;
+    z-index: 1;
+  }
+
+  thead tr:first-child th {
+    top: 0;
+  }
+
+  &.q-table--loading thead tr:last-child th {
+    top: 48px;
+  }
+
+  tbody {
+    scroll-margin-top: 48px;
+  }
+}
+
+// =============================================================================
+// 11. INPUTS
+// =============================================================================
+.style-select {
+  color: var(--color_input) !important;
+  border-color: var(--color_input) !important;
+  outline-color: var(--color_input) !important;
+}
+
+// =============================================================================
+// 12. ESTADO VACÍO
+// =============================================================================
+.empty-title {
+  font-size: 15px;
+  color: #9e9e9e;
+}
+
+.empty-state {
+  padding: 48px 18px;
+  text-align: center;
+  color: #9e9e9e;
+}
+
+// =============================================================================
+// 13. PÁGINAS PÚBLICAS (consulta de muestra y encuesta)
+// =============================================================================
+.public-page {
+  min-height: 100vh;
+  padding: 24px;
+  background: $color-fondo-app;
+}
+
+.public-container {
+  width: min(880px, 100%);
+  margin: 48px auto;
+}
+
+.panel {
+  padding: 22px;
+}
+
+.panel-title {
+  margin: 0 0 18px;
+  font: 700 20px 'Roboto', sans-serif;
+}
+
+.brand-mark {
+  display: inline-flex;
+  width: 42px;
+  height: 42px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 14px;
+  background: var(--color_button);
+  color: #fff;
+  font-weight: 700;
+  font-size: 18px;
+}
+
+// Estados semánticos para el badge de estado (StatusBadge).
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border-radius: 99px;
+  padding: 5px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.status-success { color: #1b5e20; background: #e8f5e9; }
+.status-warning { color: #8d6900; background: #fff8e1; }
+.status-info { color: #01579b; background: #e1f5fe; }
+.status-accent { color: #6a1b9a; background: #f3e5f5; }
+.status-danger { color: #b71c1c; background: #fdecea; }
+.status-neutral { color: #616161; background: #f0f0f0; }
+
+// Línea de tiempo del seguimiento.
+.timeline {
+  display: grid;
+  gap: 0;
+}
+
+.timeline-event {
+  position: relative;
+  padding: 0 0 22px 28px;
+  border-left: 1px solid $color-borde;
+
+  &:last-child {
+    border-left-color: transparent;
+  }
+
+  &::before {
+    content: '';
+    position: absolute;
+    left: -5px;
+    top: 4px;
+    width: 9px;
+    height: 9px;
+    background: var(--q-primary);
+    border-radius: 50%;
+  }
+
+  time {
+    font-size: 12px;
+    color: $color-texto-suave;
+  }
+
+  p {
+    margin: 5px 0 0;
+  }
+}
+
+// Stepper de etapas.
+.step-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: $color-borde;
+  display: inline-block;
+
+  &.active {
+    background: var(--q-primary);
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--q-primary), transparent 84%);
+  }
+}
+
+// =============================================================================
+// 14. SCROLLBARS
+// =============================================================================
+::-webkit-scrollbar {
+  -webkit-appearance: none;
+}
+
+::-webkit-scrollbar:vertical {
+  width: 12px;
+}
+
+::-webkit-scrollbar:horizontal {
+  height: 12px;
+}
+
+::-webkit-scrollbar-button:increment,
+::-webkit-scrollbar-button {
+  display: none;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: #bbbbbb;
+  border-radius: 5px;
+  border: 2px solid #f1f2f3;
+}
+
+::-webkit-scrollbar-track {
+  border-radius: 5px;
+}
+
+// =============================================================================
+// 15. RESPONSIVE
+// =============================================================================
+@media (max-width: 700px) {
+  .public-page {
+    padding: 14px;
+  }
+
+  .public-container {
+    margin: 24px auto;
+  }
+
+  .panel {
+    padding: 17px;
+  }
+}

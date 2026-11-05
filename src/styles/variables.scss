@@ -1,0 +1,46 @@
+// =============================================================================
+// /styles/variables.scss
+// Variables SCSS globales. Este archivo lo lee Quasar (ver vite.config.js ->
+// quasar({ sassVariables: "src/styles/variables.scss" })) ANTES de compilar sus
+// propios estilos, por eso cambiar $primary aquí repinta toda la aplicación:
+// botones, toolbars, tabs, inputs... todo lo que use color="primary".
+//
+// REGLA: aquí solo van valores, nunca selectores CSS.
+//
+// La paleta es la del Laboratorio SENA (ver ESTILOS.md). #2e7d32 es el verde de
+// marca (green-9 de Quasar), tomado como $primary para que color="primary"
+// pinte verde en toda la interfaz sin tocar ni un componente.
+// =============================================================================
+
+// --- Colores de marca de Quasar (los nombres son fijos, no inventar otros) ---
+$primary: #2e7d32; // verde de marca (green-9)
+$secondary: #26a69a;
+$accent: #9c27b0;
+
+$dark: #1d1d1d;
+$dark-page: #14161a;
+
+$positive: #21ba45;
+$negative: #c10015;
+$info: #31ccec;
+$warning: #f2c037;
+
+// --- Paleta de apoyo (ver la tabla de verdes de ESTILOS.md) ------------------
+$verde-card: #318335; // cabecera de cards
+$verde-oscuro: #1b5e20; // acciones secundarias, hr (green-10)
+$verde-hover: #66bb6a; // hover y bordes activos (green-5)
+$verde-suave: #e8f5e9; // fondo suave de hover (green-1)
+$verde-borde: #c8e6c9; // bordes de tabla (green-2)
+
+// --- Neutros ----------------------------------------------------------------
+$texto-principal: #212121;
+$texto-fuerte: #424242;
+$texto-secundario: #616161;
+$color-texto-suave: #616161;
+$color-borde: #e0e0e0;
+$color-fondo-app: #fafafa;
+
+// --- Medidas ----------------------------------------------------------------
+$radio-tarjeta: 8px;
+$radio-dialogo: 12px;
+$ancho-maximo-contenido: 1180px;
