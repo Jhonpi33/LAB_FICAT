@@ -27,6 +27,7 @@ const cargando = ref(true)
 const error = ref(null)
 const totalActividad = ref(0)
 const conteos = ref(new Map())
+const cargaNro = ref(0) // incrementa en cada carga para re-trigger la animación
 
 // Rango: termina el SÁBADO de la semana actual (como GitHub) y retrocede
 // 53 semanas. Así la columna final siempre es la semana en curso.
@@ -66,7 +67,17 @@ const semanas = computed(() => {
       const clave = claveDe(fecha)
       const cantidad = conteos.value.get(clave) || 0
       const futuro = fecha.getTime() > hoyUtc.getTime()
-      dias.push({ clave, fecha, cantidad, futuro, nivel: nivelDe(cantidad), texto: textoDe(fecha, cantidad) })
+      dias.push({
+        clave,
+        fecha,
+        cantidad,
+        futuro,
+        activa: cantidad > 0 && !futuro,
+        nivel: nivelDe(cantidad),
+        texto: textoDe(fecha, cantidad),
+        // Retraso en cascada (por columna + fila) para el efecto "ola".
+        retraso: `${s * 14 + d * 5}ms`,
+      })
     }
     lista.push(dias)
   }
@@ -98,6 +109,7 @@ const cargar = async () => {
     }
     conteos.value = mapa
     totalActividad.value = total
+    cargaNro.value += 1 // re-trigger la animación de entrada
   } catch (e) {
     error.value = e.mensaje
   } finally {
@@ -164,14 +176,14 @@ onMounted(cargar)
               <span style="top: 76px">vie</span>
             </div>
 
-            <div class="heatmap__grid">
+            <div class="heatmap__grid" :key="cargaNro">
               <template v-for="(semana, s) in semanas" :key="s">
                 <span
                   v-for="dia in semana"
                   :key="dia.clave"
                   class="heatmap__celda"
-                  :class="{ 'heatmap__celda--futuro': dia.futuro }"
-                  :style="{ background: dia.futuro ? 'transparent' : NIVELES[dia.nivel], animationDelay: `${s * 9}ms` }"
+                  :class="{ 'heatmap__celda--futuro': dia.futuro, 'heatmap__celda--activa': dia.activa }"
+                  :style="{ background: dia.futuro ? 'transparent' : NIVELES[dia.nivel], '--d': dia.retraso }"
                 >
                   <q-tooltip :delay="150" anchor="top middle" self="bottom middle" transition-show="scale" transition-hide="scale">
                     {{ dia.texto }}
@@ -293,7 +305,8 @@ onMounted(cargar)
   width: 12px;
   height: 12px;
   border-radius: 3px;
-  animation: celda-aparecer 0.45s cubic-bezier(0.22, 0.9, 0.35, 1) both;
+  animation: celda-aparecer 0.55s cubic-bezier(0.22, 0.9, 0.35, 1) both;
+  animation-delay: var(--d, 0ms);
   transition: background-color 0.3s ease, transform 0.15s ease;
 
   &:hover {
@@ -304,16 +317,35 @@ onMounted(cargar)
     border: 1px solid rgba(255, 255, 255, 0.06);
     animation: none;
   }
+
+  // Celdas con actividad: además de aparecer, emiten un pulso de brillo
+  // permanente para que el gráfico siempre se vea "vivo".
+  &--activa {
+    animation:
+      celda-aparecer 0.55s cubic-bezier(0.22, 0.9, 0.35, 1) both,
+      brillo-celda 2.4s ease-in-out infinite;
+    animation-delay: var(--d, 0ms), calc(var(--d, 0ms) + 1s);
+  }
 }
 
 @keyframes celda-aparecer {
   from {
     opacity: 0;
-    transform: scale(0.4);
+    transform: scale(0.25);
   }
   to {
     opacity: 1;
     transform: scale(1);
+  }
+}
+
+@keyframes brillo-celda {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(45, 212, 191, 0);
+  }
+  50% {
+    box-shadow: 0 0 10px 2px rgba(45, 212, 191, 0.8);
   }
 }
 
