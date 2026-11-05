@@ -7,6 +7,7 @@
  */
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 
+import ActivityHeatmap from '@/components/ActivityHeatmap.vue'
 import { get } from '@/services/api.service'
 import { useAuthStore } from '@/store/Auth'
 import { useGeneralStore } from '@/store/General'
@@ -581,6 +582,17 @@ const estadoLabel = (e) => ESTADOS_SOLICITUD.find((x) => x.value === e)?.label |
                 <div class="mes__cantidad">{{ m.cantidad }} pago(s)</div>
               </div>
             </div>
+          </q-card-section>
+        </q-card>
+
+        <!-- Actividad del laboratorio (heatmap estilo GitHub) -->
+        <q-card flat class="vidrio panel-vidrio q-mb-lg animar" style="animation-delay: 460ms">
+          <q-card-section>
+            <div class="titulo-seccion-panel">
+              <q-icon name="calendar_month" size="20px" />
+              Actividad del laboratorio
+            </div>
+            <ActivityHeatmap />
           </q-card-section>
         </q-card>
 

@@ -17,6 +17,7 @@ import informesRoutes from './routes/informes.routes.js';
 import notificacionesRoutes from './routes/notificaciones.routes.js';
 import facturasRoutes from './routes/facturas.routes.js';
 import disposicionesRoutes from './routes/disposiciones.routes.js';
+import eventosRoutes from './routes/eventos.routes.js';
 import errorHandler from './middlewares/errorHandler.js';
 
 const app = express();
@@ -44,6 +45,7 @@ app.use('/api/informes', informesRoutes);
 app.use('/api/notificaciones', notificacionesRoutes);
 app.use('/api/facturas', facturasRoutes);
 app.use('/api/disposiciones', disposicionesRoutes);
+app.use('/api/eventos', eventosRoutes);
 
 app.use((req, res) => {
   res.status(404).json({ ok: false, mensaje: 'Ruta no encontrada' });
