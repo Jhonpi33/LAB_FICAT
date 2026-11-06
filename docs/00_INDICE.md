@@ -22,6 +22,7 @@ realiza un cambio relevante se crea o actualiza un documento aquí** explicando
 | 06 | `06_AUTENTICACION_LOGIN.md` | JWT, roles, permisos y login | ✅ |
 | 07 | `07_SEGUIMIENTO_PUBLICO.md` | Consulta por código conectada a la BD | ⏳ Fase 1 |
 | 08 | `08_GUIA_CLONAR_EJECUTAR.md` | Cómo el equipo clona y ejecuta el proyecto (env, Atlas, arranque) | ✅ |
+| 09 | `09_GUIA_GIT_EQUIPO.md` | Flujo práctico de Git: bajar cambios, ramas propias, fusionar sin pisarse | ✅ |
 | LOG | `LOG_CAMBIOS.md` | Bitácora cronológica de todo lo hecho | ✅ |
 
 ---
