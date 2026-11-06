@@ -1,8 +1,11 @@
 <script setup>
 /**
  * /views/SolicitudesView.vue
- * Solicitudes de servicio. El tipo de cliente (interno/externo) lo deriva el
- * backend a partir del cliente seleccionado (RF-003).
+ * Solicitudes de servicio, con estilo profesional SENA:
+ *   - Resumen por estado en píldoras (clic = filtrar la tabla)
+ *   - Tabla con cliente + tipo, prioridad (con aviso de atención inmediata),
+ *     estado con chip de color y fecha
+ * El tipo de cliente (interno/externo) lo deriva el backend (RF-003).
  */
 import { computed, onMounted, ref } from 'vue'
 
@@ -30,8 +33,20 @@ const ESTADOS = [
   { label: 'Pagada', value: 'pagada' },
   { label: 'Rechazada', value: 'rechazada' },
 ]
-const ESTADO_COLOR = { pendiente: 'grey-4', cotizada: 'blue-2', aceptada: 'green-2', pagada: 'green-9', rechazada: 'red-2' }
-const ESTADO_TEXTO = { pendiente: 'grey-9', cotizada: 'blue-9', aceptada: 'green-10', pagada: 'white', rechazada: 'red-10' }
+
+// Colores de la marca para los puntos de las píldoras.
+const ESTADO_HEX = { pendiente: '#b0b7b1', cotizada: '#81c784', aceptada: '#4caf50', pagada: '#2e7d32', rechazada: '#e57373' }
+
+// Chips de estado en la tabla (fondo suave + texto oscuro, como el panel).
+const ESTADO_CHIP = {
+  pendiente: { bg: '#f1f3f1', texto: '#5f6b61' },
+  cotizada: { bg: '#e8f5e9', texto: '#1b5e20' },
+  aceptada: { bg: '#e8f5e9', texto: '#1b5e20' },
+  pagada: { bg: '#dceddd', texto: '#144d17' },
+  rechazada: { bg: '#fdecea', texto: '#b71c1c' },
+}
+
+const TIPO_LABEL = { interno: 'Interno', externo: 'Externo' }
 
 const columnas = [
   { name: 'cliente', label: 'Cliente', field: (row) => row.cliente_id?.nombre || '', align: 'left', sortable: true },
@@ -47,7 +62,20 @@ const clientes = ref([])
 const cargando = ref(false)
 const error = ref(null)
 
+// Filtro por estado ('todas' o un valor de ESTADOS).
+const filtroEstado = ref('todas')
+
 const opcionesCliente = computed(() => clientes.value.map((c) => ({ label: c.nombre, value: c._id })))
+
+const conteoPorEstado = computed(() => {
+  const conteo = {}
+  for (const e of ESTADOS) conteo[e.value] = solicitudes.value.filter((s) => s.estado === e.value).length
+  return conteo
+})
+
+const solicitudesFiltradas = computed(() =>
+  filtroEstado.value === 'todas' ? solicitudes.value : solicitudes.value.filter((s) => s.estado === filtroEstado.value),
+)
 
 const cargar = async () => {
   cargando.value = true
@@ -151,6 +179,9 @@ const guardarEstado = async () => {
     cambiandoEstado.value = false
   }
 }
+
+const prioridadLabel = (p) => PRIORIDADES.find((x) => x.value === p)?.label || p
+const estadoLabel = (e) => ESTADOS.find((x) => x.value === e)?.label || e
 </script>
 
 <template>
@@ -172,24 +203,79 @@ const guardarEstado = async () => {
         <template #action><q-btn flat dense no-caps label="Reintentar" @click="cargar" /></template>
       </q-banner>
 
-      <TablaDatos :filas="solicitudes" :columnas="columnas" :cargando="cargando" mensaje-vacio="Aún no hay solicitudes registradas">
+      <!-- Resumen por estado (clic = filtrar) -->
+      <div class="resumen q-mb-md">
+        <button
+          type="button"
+          class="pildora"
+          :class="{ 'pildora--activa': filtroEstado === 'todas' }"
+          @click="filtroEstado = 'todas'"
+        >
+          <span class="pildora__num">{{ solicitudes.length }}</span>
+          <span class="pildora__label">Todas</span>
+        </button>
+
+        <button
+          v-for="estado in ESTADOS"
+          :key="estado.value"
+          type="button"
+          class="pildora"
+          :class="{ 'pildora--activa': filtroEstado === estado.value }"
+          @click="filtroEstado = estado.value"
+        >
+          <span class="pildora__punto" :style="{ background: ESTADO_HEX[estado.value] }" />
+          <span class="pildora__num">{{ conteoPorEstado[estado.value] || 0 }}</span>
+          <span class="pildora__label">{{ estado.label }}</span>
+        </button>
+      </div>
+
+      <TablaDatos
+        :filas="solicitudesFiltradas"
+        :columnas="columnas"
+        :cargando="cargando"
+        :mensaje-vacio="filtroEstado === 'todas' ? 'Aún no hay solicitudes registradas' : 'No hay solicitudes con este estado'"
+      >
+        <template #body-cell-cliente="celda">
+          <q-td :props="celda">
+            <div class="row items-center no-wrap">
+              <span class="cliente-nombre">{{ celda.row.cliente_id?.nombre || '—' }}</span>
+              <span
+                class="chip-tipo"
+                :class="celda.row.tipo_cliente === 'interno' ? 'chip-tipo--interno' : 'chip-tipo--externo'"
+              >
+                {{ TIPO_LABEL[celda.row.tipo_cliente] || celda.row.tipo_cliente }}
+              </span>
+            </div>
+          </q-td>
+        </template>
+
+        <template #body-cell-descripcion="celda">
+          <q-td :props="celda" class="celda-descripcion">
+            <span v-if="celda.row.atencion_inmediata" class="aviso-inmediato">
+              <q-icon name="bolt" size="14px" class="q-mr-xs" />
+            </span>
+            {{ celda.row.descripcion }}
+          </q-td>
+        </template>
+
         <template #body-cell-prioridad="celda">
           <q-td :props="celda" class="text-center">
             <q-badge
               :color="celda.row.prioridad === 'alta' ? 'orange-2' : celda.row.prioridad === 'media' ? 'blue-1' : 'grey-3'"
               :text-color="celda.row.prioridad === 'alta' ? 'orange-9' : celda.row.prioridad === 'media' ? 'blue-9' : 'grey-8'"
-              :label="PRIORIDADES.find((p) => p.value === celda.row.prioridad)?.label || celda.row.prioridad"
+              :label="prioridadLabel(celda.row.prioridad)"
             />
           </q-td>
         </template>
 
         <template #body-cell-estado="celda">
           <q-td :props="celda" class="text-center">
-            <q-badge
-              :color="ESTADO_COLOR[celda.row.estado] || 'grey-4'"
-              :text-color="ESTADO_TEXTO[celda.row.estado] || 'grey-9'"
-              :label="ESTADOS.find((e) => e.value === celda.row.estado)?.label || celda.row.estado"
-            />
+            <span
+              class="chip-estado"
+              :style="{ background: ESTADO_CHIP[celda.row.estado]?.bg, color: ESTADO_CHIP[celda.row.estado]?.texto }"
+            >
+              {{ estadoLabel(celda.row.estado) }}
+            </span>
           </q-td>
         </template>
 
@@ -289,3 +375,123 @@ const guardarEstado = async () => {
     </q-dialog>
   </q-page>
 </template>
+
+<style scoped lang="scss">
+// Píldoras de resumen por estado (clic = filtrar)
+.resumen {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.pildora {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 14px;
+  background: #ffffff;
+  border: 1px solid #e4e9e4;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+
+  &:hover {
+    border-color: #c8e6c9;
+  }
+
+  &--activa {
+    background: #e8f5e9;
+    border-color: #2e7d32;
+    box-shadow: 0 2px 8px rgba(16, 42, 18, 0.08);
+  }
+
+  &__punto {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  &__num {
+    font-size: 17px;
+    font-weight: 800;
+    color: #14261a;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+  }
+
+  &__label {
+    font-size: 12px;
+    font-weight: 600;
+    color: #5f6b61;
+  }
+
+  &--activa .pildora__label {
+    color: #1b5e20;
+    font-weight: 700;
+  }
+}
+
+// Cliente + tipo en la tabla
+.cliente-nombre {
+  font-weight: 700;
+  color: #14261a;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.chip-tipo {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 8px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 10.5px;
+  font-weight: 700;
+  flex-shrink: 0;
+
+  &--interno {
+    background: #e8f5e9;
+    color: #1b5e20;
+  }
+
+  &--externo {
+    background: #e3f2fd;
+    color: #0d47a1;
+  }
+}
+
+// Descripción con aviso de atención inmediata
+.celda-descripcion {
+  max-width: 320px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.aviso-inmediato {
+  color: #e65100;
+  vertical-align: middle;
+}
+
+// Chip de estado (fondo suave + texto oscuro)
+.chip-estado {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+@media (max-width: 600px) {
+  .resumen {
+    gap: 6px;
+  }
+
+  .pildora {
+    padding: 6px 10px;
+  }
+}
+</style>
