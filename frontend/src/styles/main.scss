@@ -206,17 +206,57 @@ body {
 // =============================================================================
 // 8. DIÁLOGOS
 // =============================================================================
-.dialog-card {
+// Especificidad extra (`.q-card.dialog-card`) para que gane SIEMPRE a los
+// estilos de Quasar, sin importar el orden en que se inyecten en dev.
+.q-card.dialog-card {
   width: 520px; // formulario pequeño; 700px para uno mediano
   max-width: 95vw;
-  border-radius: $radio-dialogo;
+  border-radius: 18px;
   overflow: hidden;
+  box-shadow: 0 24px 70px rgba(16, 42, 18, 0.28);
 }
 
 .dialog-title {
-  font-size: 20px;
-  font-weight: 700;
-  line-height: 1.3;
+  font-size: 21px;
+  font-weight: 800;
+  line-height: 1.25;
+  letter-spacing: 0.1px;
+}
+
+// Cabecera con degradado de marca en TODOS los diálogos de la app.
+.q-dialog .bg-primary {
+  background: linear-gradient(135deg, #2e7d32 0%, #1b5e20 100%) !important;
+}
+
+// Icono de la cabecera dentro de un chip translúcido (primer hijo directo).
+.q-dialog .bg-primary > .q-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.18);
+  font-size: 24px !important;
+  margin-right: 14px;
+  flex-shrink: 0;
+}
+
+// Pie de los diálogos con separador superior.
+.q-dialog .q-card__actions {
+  border-top: 1px solid #f0f3f0;
+  padding-top: 12px;
+}
+
+// Inputs y selects con bordes redondeados dentro de los diálogos.
+.q-dialog .q-field--outlined .q-field__control {
+  border-radius: 10px;
+}
+
+// Fondo de la página ligeramente difuminado tras el diálogo.
+.q-dialog__backdrop {
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
 }
 
 // =============================================================================
