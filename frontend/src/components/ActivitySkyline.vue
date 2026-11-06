@@ -22,6 +22,7 @@ const cargando = ref(true)
 const error = ref(null)
 const conteos = ref(new Map())
 const cargaNro = ref(0)
+const totalAnterior = ref(0)
 
 // Órbita (grados) controlada con arrastre.
 const orb = ref(0)
@@ -30,6 +31,7 @@ let inicioX = 0
 let inicioOrb = 0
 
 const PASO = 15 // tamaño de celda + separación
+const MESES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic']
 
 // Color según la intensidad (verde de marca, tema claro).
 const colorDe = (n) => {
@@ -101,6 +103,20 @@ const etiquetaPeriodo = computed(() => {
 
 const totalActividad = computed(() => dias.value.reduce((acc, d) => acc + d.cantidad, 0))
 
+/** Variación del total frente al período anterior (misma cantidad de días). */
+const variacion = computed(() => {
+  if (!totalAnterior.value && !totalActividad.value) return null
+  if (!totalAnterior.value) return 100
+  return Math.round(((totalActividad.value - totalAnterior.value) / totalAnterior.value) * 100)
+})
+
+const diasConActividad = computed(() => barras.value.length)
+
+const promedioDiario = computed(() => {
+  const diasTotal = props.semanas * 7
+  return (totalActividad.value / diasTotal).toFixed(1)
+})
+
 const diaMasActivo = computed(() =>
   dias.value.reduce((mejor, d) => (d.cantidad > mejor.cantidad ? d : mejor), { cantidad: 0, fecha: null }),
 )
@@ -131,6 +147,18 @@ const rachaActual = computed(() => {
   return racha
 })
 
+// Etiquetas de meses para el borde superior del plano.
+const etiquetasMeses = computed(() => {
+  const labels = []
+  for (let s = 0; s < props.semanas; s++) {
+    const fecha = new Date(inicio.value)
+    fecha.setUTCDate(inicio.value.getUTCDate() + s * 7)
+    const mes = fecha.getUTCMonth()
+    if (!labels.length || labels[labels.length - 1].mes !== mes) labels.push({ s, nombre: MESES[mes] })
+  }
+  return labels
+})
+
 // --- Órbita con arrastre --------------------------------------------------------
 function alPresionar(e) {
   arrastrando = true
@@ -156,10 +184,17 @@ const cargar = async () => {
   cargando.value = true
   error.value = null
   try {
-    const datos = await get(`/eventos/actividad?dias=${props.semanas * 7}`)
+    // Se pide el DOBLE de días para comparar con el período anterior.
+    const datos = await get(`/eventos/actividad?dias=${props.semanas * 7 * 2}`)
     const mapa = new Map()
-    for (const item of datos) mapa.set(item.fecha, item.cantidad)
+    const limite = claveDe(inicio.value)
+    let previo = 0
+    for (const item of datos) {
+      mapa.set(item.fecha, item.cantidad)
+      if (item.fecha < limite) previo += item.cantidad
+    }
     conteos.value = mapa
+    totalAnterior.value = previo
     cargaNro.value += 1
   } catch (e) {
     error.value = e.mensaje
@@ -180,9 +215,24 @@ onMounted(cargar)
         <span class="stat__num">{{ totalActividad }}</span>
         <span class="stat__texto">actividades {{ etiquetaPeriodo }}</span>
       </div>
+      <div class="stat" v-if="variacion !== null">
+        <span class="stat__num" :class="variacion > 0 ? 'stat__num--sube' : variacion < 0 ? 'stat__num--baja' : ''">
+          <q-icon :name="variacion > 0 ? 'arrow_upward' : variacion < 0 ? 'arrow_downward' : 'remove'" size="14px" />
+          {{ Math.abs(variacion) }}%
+        </span>
+        <span class="stat__texto">vs. el período anterior</span>
+      </div>
       <div class="stat">
         <span class="stat__num">{{ diaMasActivo.cantidad }}</span>
         <span class="stat__texto">el día más activo · {{ fechaMasActivo }}</span>
+      </div>
+      <div class="stat">
+        <span class="stat__num">{{ diasConActividad }}</span>
+        <span class="stat__texto">{{ diasConActividad === 1 ? 'día' : 'días' }} con actividad</span>
+      </div>
+      <div class="stat">
+        <span class="stat__num">{{ promedioDiario }}</span>
+        <span class="stat__texto">promedio por día</span>
       </div>
       <div class="stat">
         <span class="stat__num">{{ rachaMaxima }}</span>
@@ -223,6 +273,21 @@ onMounted(cargar)
           :key="cargaNro"
           :style="{ width: anchoPx + 'px', height: altoPx + 'px' }"
         >
+          <!-- Etiquetas de meses (borde superior, giran con el plano) -->
+          <span
+            v-for="m in etiquetasMeses"
+            :key="m.s"
+            class="skyline__mes"
+            :style="{ left: `${m.s * 15 - 14}px` }"
+          >
+            {{ m.nombre }}
+          </span>
+
+          <!-- Etiquetas de días (borde izquierdo, giran con el plano) -->
+          <span class="skyline__dia" style="top: 16px">lun</span>
+          <span class="skyline__dia" style="top: 46px">mié</span>
+          <span class="skyline__dia" style="top: 76px">vie</span>
+
           <span
             v-for="barra in barras"
             :key="barra.clave"
@@ -328,6 +393,26 @@ onMounted(cargar)
     border: 1px solid #dbe7dc;
     border-radius: 6px;
     animation: flotar 7s ease-in-out infinite;
+  }
+
+  // Etiquetas de meses sobre el borde superior del plano (isométricas)
+  &__mes {
+    position: absolute;
+    top: -24px;
+    font-size: 11px;
+    font-weight: 700;
+    color: #6b786d;
+    letter-spacing: 0.3px;
+  }
+
+  // Etiquetas de días sobre el borde izquierdo del plano
+  &__dia {
+    position: absolute;
+    left: -36px;
+    width: 30px;
+    text-align: right;
+    font-size: 10px;
+    color: #8a978d;
   }
 
   &__vacio {
@@ -438,11 +523,22 @@ onMounted(cargar)
 }
 
 .stat__num {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   font-size: 20px;
   font-weight: 800;
   color: #1b5e20;
   line-height: 1;
   font-variant-numeric: tabular-nums;
+
+  &--sube {
+    color: #2e7d32;
+  }
+
+  &--baja {
+    color: #b71c1c;
+  }
 }
 
 .stat__texto {

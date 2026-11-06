@@ -13,6 +13,7 @@
  */
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 
+import ActivityHeatmap from '@/components/ActivityHeatmap.vue'
 import ActivitySkyline from '@/components/ActivitySkyline.vue'
 import { get } from '@/services/api.service'
 import { useAuthStore } from '@/store/Auth'
@@ -79,6 +80,13 @@ const PERIODOS = [
   { label: '12M', semanas: 53 },
 ]
 const periodo = ref(PERIODOS[3])
+
+// Vista de la actividad: skyline 3D o heatmap 2D.
+const VISTAS_ACTIVIDAD = [
+  { label: '3D', value: '3d', icono: 'view_in_ar' },
+  { label: '2D', value: '2d', icono: 'grid_on' },
+]
+const vistaActividad = ref('3d')
 
 // --- Accesos a módulos ------------------------------------------------------------
 const accesos = [
@@ -566,11 +574,30 @@ const prioridadColor = (p) => ({ alta: 'texto-alta', media: 'texto-media', baja:
           </div>
         </div>
 
-        <!-- Actividad (heatmap) -->
+        <!-- Actividad (skyline 3D / heatmap 2D) -->
         <q-card flat class="tarjeta-luz q-mb-lg animar" style="animation-delay: 460ms">
           <q-card-section>
-            <div class="titulo-seccion q-mb-md">Actividad del laboratorio</div>
-            <ActivitySkyline :semanas="periodo.semanas" />
+            <div class="row items-center no-wrap q-mb-md">
+              <div class="titulo-seccion q-mb-none">Actividad del laboratorio</div>
+              <q-space />
+              <!-- Cambio de vista -->
+              <div class="segmento" role="tablist" aria-label="Vista de actividad">
+                <button
+                  v-for="v in VISTAS_ACTIVIDAD"
+                  :key="v.value"
+                  type="button"
+                  class="segmento__item"
+                  :class="{ 'segmento__item--activo': vistaActividad === v.value }"
+                  @click="vistaActividad = v.value"
+                >
+                  <q-icon :name="v.icono" size="15px" class="q-mr-xs" />
+                  {{ v.label }}
+                </button>
+              </div>
+            </div>
+
+            <ActivitySkyline v-if="vistaActividad === '3d'" :semanas="periodo.semanas" />
+            <ActivityHeatmap v-else :semanas="periodo.semanas" />
           </q-card-section>
         </q-card>
 
