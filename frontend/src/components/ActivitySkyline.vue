@@ -154,7 +154,7 @@ const etiquetasMeses = computed(() => {
     const fecha = new Date(inicio.value)
     fecha.setUTCDate(inicio.value.getUTCDate() + s * 7)
     const mes = fecha.getUTCMonth()
-    if (!labels.length || labels[labels.length - 1].mes !== mes) labels.push({ s, nombre: MESES[mes] })
+    if (!labels.length || labels[labels.length - 1].mes !== mes) labels.push({ s, mes, nombre: MESES[mes] })
   }
   return labels
 })
