@@ -157,7 +157,74 @@ git revert <código-del-commit>   # deshace ESE cambio sin borrar el historial
 
 ---
 
-## 8. Resumen de bolsillo (copiar y pegar)
+## 8. 👥 Trabajar EN PARALELO en módulos distintos (el caso del equipo)
+
+**Escenario:** Jaunda mejora **Clientes** y Joymar mejora **Notificaciones**,
+los dos al mismo tiempo. ¿Se pisan? **No**, si cada uno toca solo los archivos
+de su módulo. Así funciona:
+
+### Por qué NO se pisan
+
+| Persona | Rama | Archivos que toca |
+|---|---|---|
+| Jaunda | `jaunda-clientes` | `frontend/src/views/ClientesView.vue` |
+| Joymar | `joymar-notificaciones` | `frontend/src/views/NotificacionesView.vue` |
+
+Como son **archivos distintos**, Git puede unir las dos ramas en `DV` **sin un
+solo conflicto**, en el orden que sea. Los dos trabajos quedan los dos.
+
+### La línea de tiempo, paso a paso
+
+```
+1) Ambos parten del mismo punto:
+   git checkout DV && git pull leon DV
+   Jaunda:  git checkout -b jaunda-clientes
+   Joymar:  git checkout -b joymar-notificaciones
+
+2) Cada uno trabaja en SU archivo y sube su rama:
+   Jaunda:  git add . && git commit -m "mejoro vista de clientes"
+            git push -u leon jaunda-clientes
+   Joymar:  git add . && git commit -m "mejoro bandeja de notificaciones"
+            git push -u leon joymar-notificaciones
+
+3) Jaunda termina primero → su Pull Request se fusiona en DV.
+   (DV ahora tiene el trabajo de Jaunda)
+
+4) Joymar termina después. Antes de su Pull Request, DV ya trae lo de Jaunda.
+   GitHub le dice "This branch has no conflicts" porque tocaron archivos
+   distintos → Merge directo.
+
+5) Resultado: DV tiene lo de CLIENTES ✅ y lo de NOTIFICACIONES ✅.
+   Nadie perdió nada, nadie esperó a nadie.
+```
+
+### ⚠️ Los 4 archivos COMPARTIDOS (aquí sí hay que coordinar)
+
+Hay archivos que TODOS necesitan tocar alguna vez. Son estos:
+
+| Archivo | Quién lo toca | Cómo evitar líos |
+|---|---|---|
+| `frontend/src/router/index.js` | El que agregue una vista nueva | Avisar en el grupo: "hoy agrego la ruta de X" |
+| `frontend/src/layouts/AdminLayout.vue` | El que agregue ítems al menú | Igual: avisar antes |
+| `backend/src/app.js` | El que agregue rutas del backend | Igual: avisar antes |
+| `docs/00_INDICE.md` | Cualquiera al documentar | Sin miedo: Git lo une solo si editan líneas distintas |
+
+> Aun así, tranquilos: Git fusiona **línea por línea**. Si Jaunda agregó el ítem
+> "Clientes" al menú en la línea 40 y Joymar agregó "Notificaciones" en la
+> línea 50, el merge **une las dos líneas solo**. El conflicto solo aparece
+> si los dos editaron **la misma línea** — y eso se resuelve en 1 minuto (§6).
+
+### Regla práctica del grupo
+
+> 📌 **Reparto de módulos en el grupo antes de empezar la semana:**
+> *"Jaunda: clientes · Joymar: notificaciones · León: informes · Jhon: panel."*
+>
+> Cada uno toca **solo lo suyo**. Los archivos compartidos se tocan de a uno y
+> avisando. Con eso, las fusiones son automáticas y nadie espera a nadie.
+
+---
+
+## 9. Resumen de bolsillo (copiar y pegar)
 
 ```bash
 # ── Cada día, antes de trabajar ──
