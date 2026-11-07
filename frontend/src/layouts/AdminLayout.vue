@@ -2,8 +2,10 @@
 /**
  * /layouts/AdminLayout.vue
  * Plantilla ÚNICA de la aplicación interna (con sesión).
- * El login, el seguimiento y la encuesta NO usan este layout: son pantallas
- * públicas sueltas.
+ * El login, el seguimiento y la encuesta NO usan este layout.
+ *
+ * Diseño: cabecera blanca y limpia (estilo SaaS) con acentos en el verde de
+ * marca, menú lateral claro y pie de página con los datos del entorno.
  */
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
@@ -24,8 +26,7 @@ const { notificarInfo } = useNotificar()
 /**
  * BADGE DE NOTIFICACIONES PENDIENTES:
  * consulta la bandeja (GET /notificaciones?estado=pendiente) al entrar, al
- * cambiar de página y cada 30 segundos. Si hay pendientes, el menú y la
- * campana de la cabecera muestran el contador en rojo.
+ * cambiar de página y cada 30 segundos.
  */
 const pendientes = ref(0)
 let timerNotificaciones = null
@@ -55,10 +56,6 @@ const salir = () => {
   router.push({ name: 'login' })
 }
 
-/**
- * Opciones del menú lateral. "soloAdmin" oculta la opción para perfiles que no
- * sean administrador. Para agregar un módulo nuevo, se suma una línea aquí.
- */
 const opcionesMenu = [
   { name: 'panel', titulo: 'Panel', icono: 'dashboard' },
   { name: 'clientes', titulo: 'Clientes', icono: 'groups', soloStaff: true },
@@ -85,33 +82,50 @@ const menuVisible = computed(() =>
 
 const tituloSeccion = computed(() => route.meta?.titulo || 'Panel')
 
-// Etiqueta legible del rol para mostrar en la cabecera.
 const etiquetaRol = computed(() => {
   if (auth.esAdmin) return 'Administrador'
   if (auth.rol === 'encargado') return 'Encargado'
   return auth.rol || ''
 })
+
+/** Iniciales para el avatar del usuario (hasta 2). */
+const iniciales = computed(() => {
+  const nombre = auth.nombreUsuario || ''
+  return nombre
+    .split(' ')
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((p) => p[0])
+    .join('')
+    .toUpperCase()
+})
 </script>
 
 <template>
   <q-layout view="lHh Lpr lFf">
-    <q-header elevated class="bg-primary text-white">
-      <q-toolbar>
+    <!-- ================= CABECERA (blanca, estilo SaaS) ================= -->
+    <q-header class="cabecera">
+      <q-toolbar class="q-px-md">
         <q-btn
           flat
           dense
           round
           icon="menu"
           aria-label="Abrir menú"
+          class="boton-menu"
           @click="general.alternarMenu()"
         />
 
-        <q-toolbar-title class="text-weight-bold text-subtitle1">
-          {{ tituloSeccion }}
+        <q-toolbar-title class="titulo-cabecera">
+          <span class="marca-cabecera">LABFICAT</span>
+          <q-icon name="chevron_right" size="16px" class="separador-cabecera" />
+          <span class="seccion-cabecera">{{ tituloSeccion }}</span>
         </q-toolbar-title>
 
+        <q-space />
+
         <template v-if="auth.estaAutenticado">
-          <!-- Campana de notificaciones con contador de pendientes -->
+          <!-- Campana de notificaciones con contador -->
           <q-btn
             v-if="auth.esStaff"
             flat
@@ -119,47 +133,56 @@ const etiquetaRol = computed(() => {
             round
             icon="notifications"
             aria-label="Notificaciones"
-            class="q-mr-xs"
+            class="boton-menu q-mr-sm"
             :to="{ name: 'notificaciones' }"
           >
             <q-badge v-if="pendientes" floating color="negative" :label="pendientes > 99 ? '99+' : pendientes" />
             <q-tooltip>Notificaciones pendientes</q-tooltip>
           </q-btn>
 
-          <q-badge
-            v-if="auth.rol"
-            class="q-mr-sm gt-xs"
-            :color="auth.esAdmin ? 'white' : 'green-2'"
-            :text-color="auth.esAdmin ? 'primary' : 'green-10'"
-            :label="etiquetaRol"
-          />
-
-          <div class="text-caption q-mr-sm gt-xs">
-            {{ auth.nombreUsuario }}
+          <!-- Usuario: avatar + nombre + rol -->
+          <div class="usuario">
+            <q-avatar size="34px" class="avatar-usuario">{{ iniciales }}</q-avatar>
+            <div class="usuario__datos gt-xs">
+              <div class="usuario__nombre">{{ auth.nombreUsuario }}</div>
+              <div class="usuario__rol">{{ etiquetaRol }}</div>
+            </div>
           </div>
 
-          <q-btn flat dense round icon="logout" aria-label="Cerrar sesión" @click="salir">
+          <q-separator vertical class="q-mx-sm separador-cabecera-vertical" />
+
+          <q-btn
+            flat
+            dense
+            round
+            icon="logout"
+            aria-label="Cerrar sesión"
+            class="boton-menu"
+            @click="salir"
+          >
             <q-tooltip>Cerrar sesión</q-tooltip>
           </q-btn>
         </template>
 
-        <q-btn v-else flat dense no-caps icon="login" label="Entrar" :to="{ name: 'login' }" />
+        <q-btn v-else flat dense no-caps icon="login" label="Entrar" class="boton-menu" :to="{ name: 'login' }" />
       </q-toolbar>
     </q-header>
 
-    <q-drawer v-model="general.menuAbierto" show-if-above bordered :width="248" class="bg-white">
-      <div class="q-pa-md row items-center no-wrap">
-        <img :src="logoSena" alt="Logo SENA" width="38" height="38" class="q-mr-sm" />
+    <!-- ================= MENÚ LATERAL ================= -->
+    <q-drawer v-model="general.menuAbierto" show-if-above bordered :width="252" class="bg-white">
+      <!-- Marca -->
+      <div class="bloque-marca">
+        <img :src="logoSena" alt="Logo SENA" width="40" height="40" class="q-mr-sm" />
         <div>
           <div class="marca-panel">LAB<span class="marca-panel--acento">FICAT</span></div>
-          <div class="text-caption texto-suave">Laboratorio · SENA</div>
+          <div class="marca-panel__sub">Laboratorio de Alimentos</div>
         </div>
       </div>
 
       <q-separator />
 
       <q-list padding>
-        <q-item-label header class="text-uppercase text-caption text-weight-bold">
+        <q-item-label header class="text-uppercase text-caption text-weight-bold texto-suave">
           Menú
         </q-item-label>
 
@@ -181,14 +204,14 @@ const etiquetaRol = computed(() => {
         </q-item>
       </q-list>
 
-      <div class="absolute-bottom q-pa-md text-caption texto-suave">
-        <div>
-          <q-icon name="dns" size="14px" class="q-mr-xs" />
-          {{ general.urlApi }}
-        </div>
-        <div v-if="general.ultimaSincronizacion" class="q-mt-xs">
-          <q-icon name="schedule" size="14px" class="q-mr-xs" />
-          {{ formatDateTime(general.ultimaSincronizacion) }}
+      <!-- Etiqueta de entorno académico (RNF-017) -->
+      <div class="absolute-bottom q-pa-md">
+        <div class="tarjeta-entorno">
+          <q-icon name="school" size="18px" />
+          <div>
+            <div class="tarjeta-entorno__titulo">Entorno académico de pruebas</div>
+            <div class="tarjeta-entorno__sub">LABFICAT · v1.0.0 · SENA</div>
+          </div>
         </div>
       </div>
     </q-drawer>
@@ -196,13 +219,120 @@ const etiquetaRol = computed(() => {
     <q-page-container>
       <router-view />
     </q-page-container>
+
+    <!-- ================= PIE DE PÁGINA ================= -->
+    <q-footer class="pie">
+      <div class="pie__izq">
+        <img :src="logoSena" alt="Logo SENA" width="16" height="16" />
+        <span>LABFICAT · Laboratorio de Alimentos y Grasas — SENA</span>
+      </div>
+      <div class="pie__der">
+        <span class="pie__item">
+          <q-icon name="dns" size="13px" />
+          {{ general.urlApi }}
+        </span>
+        <span class="pie__separador">·</span>
+        <span class="pie__item">
+          <q-icon name="schedule" size="13px" />
+          {{ general.ultimaSincronizacion ? formatDateTime(general.ultimaSincronizacion) : 'sin sincronizar' }}
+        </span>
+      </div>
+    </q-footer>
   </q-layout>
 </template>
 
 <style scoped lang="scss">
-// Wordmark del proyecto en el menú lateral, a juego con el login.
+// =============================================================================
+// Cabecera blanca limpia (estilo SaaS) + pie de página con datos del entorno.
+// =============================================================================
+
+// --- Cabecera ------------------------------------------------------------------
+.cabecera {
+  background: #ffffff;
+  color: #14261a;
+  border-bottom: 1px solid #e4e9e4;
+  box-shadow: 0 1px 3px rgba(16, 42, 18, 0.06);
+}
+
+.marca-cabecera {
+  font-weight: 900;
+  font-size: 0.92rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #2e7d32;
+}
+
+.separador-cabecera {
+  color: #c2cbc3;
+}
+
+.seccion-cabecera {
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: #4d594f;
+}
+
+.titulo-cabecera {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.boton-menu {
+  color: #4d594f;
+  transition: background 0.15s ease, color 0.15s ease;
+
+  &:hover {
+    background: rgba(46, 125, 50, 0.08);
+    color: #2e7d32;
+  }
+}
+
+.separador-cabecera-vertical {
+  background: #eef1ee;
+}
+
+// Usuario en la cabecera
+.usuario {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.avatar-usuario {
+  background: #e8f5e9;
+  color: #1b5e20;
+  font-weight: 800;
+  font-size: 13px;
+  letter-spacing: 0.5px;
+}
+
+.usuario__datos {
+  line-height: 1.15;
+}
+
+.usuario__nombre {
+  font-size: 13px;
+  font-weight: 700;
+  color: #14261a;
+}
+
+.usuario__rol {
+  font-size: 11px;
+  color: #8a978d;
+}
+
+// --- Marca del menú -------------------------------------------------------------
+.bloque-marca {
+  display: flex;
+  align-items: center;
+  padding: 16px;
+  background: linear-gradient(135deg, #f0f7f0, #ffffff);
+  border-bottom: 1px solid #eef1ee;
+}
+
 .marca-panel {
-  font-size: 1.05rem;
+  font-size: 1.02rem;
   font-weight: 900;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -212,5 +342,73 @@ const etiquetaRol = computed(() => {
 
 .marca-panel--acento {
   color: #2e7d32;
+}
+
+.marca-panel__sub {
+  font-size: 11.5px;
+  color: #8a978d;
+}
+
+// Tarjeta de entorno académico (parte inferior del menú)
+.tarjeta-entorno {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  background: #f0f7f0;
+  border: 1px solid #dbe7dc;
+  border-radius: 10px;
+  color: #2e7d32;
+}
+
+.tarjeta-entorno__titulo {
+  font-size: 12px;
+  font-weight: 800;
+  color: #1b5e20;
+  line-height: 1.2;
+}
+
+.tarjeta-entorno__sub {
+  font-size: 10.5px;
+  color: #7d8a80;
+}
+
+// --- Pie de página ------------------------------------------------------------------
+.pie {
+  background: #ffffff;
+  color: #7d8a80;
+  border-top: 1px solid #e4e9e4;
+  padding: 8px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 6px;
+  font-size: 12px;
+  min-height: auto;
+}
+
+.pie__izq {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  color: #4d594f;
+}
+
+.pie__der {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.pie__item {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.pie__separador {
+  color: #c2cbc3;
 }
 </style>
