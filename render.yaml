@@ -12,6 +12,8 @@ services:
         value: production
       - key: MONGO_URI
         sync: false
+      - key: MONGO_DATABASE
+        value: labficat_dv
       - key: JWT_SECRET
         generateValue: true
       - key: JWT_EXPIRES
