@@ -10,11 +10,11 @@ if (faltantes.length > 0) {
 }
 
 export default {
-  PORT: process.env.PORT || 3000,
+  PORT: process.env.PORT || 4000,
   MONGO_URI: process.env.MONGO_URI,
   JWT_SECRET: process.env.JWT_SECRET,
   JWT_EXPIRES: process.env.JWT_EXPIRES || '12h',
-  FRONTEND_URL: process.env.FRONTEND_URL || 'http://localhost:9000',
+  FRONTEND_URL: process.env.FRONTEND_URL || 'http://localhost:5174',
   ADMIN_NOMBRE: process.env.ADMIN_NOMBRE || '',
   ADMIN_EMAIL: process.env.ADMIN_EMAIL || '',
   ADMIN_PASSWORD: process.env.ADMIN_PASSWORD || ''

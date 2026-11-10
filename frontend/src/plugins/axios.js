@@ -17,7 +17,7 @@ import { router } from '@/router'
 import { useAuthStore } from '@/store/Auth'
 
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:4000/api',
+  baseURL: apiBaseUrl(),
   headers: { 'Content-Type': 'application/json' },
   timeout: 15000,
 })
@@ -65,6 +65,12 @@ function cerrarSesionYSalir() {
   const auth = useAuthStore()
   auth.cerrarSesion()
   if (router.currentRoute.value.name !== 'login') router.push({ name: 'login' })
+}
+
+function apiBaseUrl() {
+  const configured = import.meta.env.VITE_API_URL || 'http://localhost:4000/api'
+  const base = configured.replace(/\/+$/, '')
+  return base.endsWith('/api') ? base : `${base}/api`
 }
 
 function mensajeSegunFallo(error) {

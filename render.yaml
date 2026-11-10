@@ -1,0 +1,33 @@
+services:
+  - type: web
+    name: labficat-dv-api
+    runtime: node
+    plan: free
+    rootDir: backend
+    buildCommand: npm ci
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: MONGO_URI
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_EXPIRES
+        value: 12h
+      - key: FRONTEND_URL
+        value: https://labficat-dv-web.onrender.com
+  - type: web
+    name: labficat-dv-web
+    runtime: static
+    plan: free
+    rootDir: frontend
+    buildCommand: npm ci && npm run build
+    staticPublishPath: frontend/dist
+    envVars:
+      - key: VITE_API_URL
+        fromService:
+          type: web
+          name: labficat-dv-api
+          envVarKey: RENDER_EXTERNAL_URL

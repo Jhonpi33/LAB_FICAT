@@ -23,7 +23,8 @@ import errorHandler from './middlewares/errorHandler.js';
 const app = express();
 
 app.use(helmet());
-app.use(cors({ origin: config.FRONTEND_URL, credentials: true }));
+const originsPermitidos = config.FRONTEND_URL.split(',').map((origin) => origin.trim()).filter(Boolean);
+app.use(cors({ origin: originsPermitidos, credentials: true }));
 app.use(express.json());
 
 app.get('/api/health', (req, res) => {
