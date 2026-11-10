@@ -10,7 +10,9 @@ async function connectDB() {
     await mongoose.connect(config.MONGO_URI);
   } catch (err) {
     console.error('No fue posible conectar a MongoDB Atlas:', err.message);
-    process.exit(1);
+    // Do not stop the HTTP server here. Render (and other platforms) needs the
+    // health endpoint to come up so the service can be diagnosed and recovered.
+    // Mongoose keeps retrying according to its connection settings.
   }
 }
 
