@@ -169,7 +169,7 @@ const iniciales = computed(() => {
     </q-header>
 
     <!-- ================= MENÚ LATERAL ================= -->
-    <q-drawer v-model="general.menuAbierto" show-if-above bordered :width="252" class="bg-white">
+    <q-drawer v-model="general.menuAbierto" show-if-above bordered :width="268" class="app-drawer bg-white">
       <!-- Marca -->
       <div class="bloque-marca">
         <img :src="logoSena" alt="Logo SENA" width="40" height="40" class="q-mr-sm" />
@@ -217,7 +217,11 @@ const iniciales = computed(() => {
     </q-drawer>
 
     <q-page-container>
-      <router-view />
+      <router-view v-slot="{ Component, route: pagina }">
+        <Transition name="page" mode="out-in">
+          <component :is="Component" :key="pagina.name || pagina.path" />
+        </Transition>
+      </router-view>
     </q-page-container>
 
     <!-- ================= PIE DE PÁGINA ================= -->
@@ -248,10 +252,26 @@ const iniciales = computed(() => {
 
 // --- Cabecera ------------------------------------------------------------------
 .cabecera {
-  background: #ffffff;
+  position: relative;
+  background: rgba(255, 255, 255, 0.94);
   color: #14261a;
   border-bottom: 1px solid #e4e9e4;
-  box-shadow: 0 1px 3px rgba(16, 42, 18, 0.06);
+  box-shadow: 0 8px 26px rgba(25, 55, 36, 0.055);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+
+  &::after {
+    content: '';
+    position: absolute;
+    inset: auto 0 -1px;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(46, 125, 50, 0.38), transparent);
+  }
+}
+
+.cabecera :deep(.q-toolbar) {
+  min-height: 68px;
+  padding-inline: clamp(14px, 2vw, 28px);
 }
 
 .marca-cabecera {
@@ -260,6 +280,12 @@ const iniciales = computed(() => {
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: #2e7d32;
+  transition: letter-spacing 0.25s ease, color 0.25s ease;
+
+  &:hover {
+    letter-spacing: 0.12em;
+    color: #1b5e20;
+  }
 }
 
 .separador-cabecera {
@@ -297,11 +323,21 @@ const iniciales = computed(() => {
   display: flex;
   align-items: center;
   gap: 10px;
+  padding: 5px 10px 5px 5px;
+  border: 1px solid #edf1ed;
+  border-radius: 999px;
+  background: rgba(248, 251, 248, 0.82);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+
+  &:hover {
+    border-color: #d3e5d4;
+    box-shadow: 0 4px 14px rgba(27, 94, 32, 0.08);
+  }
 }
 
 .avatar-usuario {
-  background: #e8f5e9;
-  color: #1b5e20;
+  background: linear-gradient(145deg, #e6f5e8, #c9e8ce);
+  color: #155b2b;
   font-weight: 800;
   font-size: 13px;
   letter-spacing: 0.5px;
@@ -326,8 +362,10 @@ const iniciales = computed(() => {
 .bloque-marca {
   display: flex;
   align-items: center;
-  padding: 16px;
-  background: linear-gradient(135deg, #f0f7f0, #ffffff);
+  padding: 20px 18px;
+  background:
+    radial-gradient(circle at 0 0, rgba(98, 175, 109, 0.14), transparent 58%),
+    linear-gradient(135deg, #f5faf5, #ffffff 74%);
   border-bottom: 1px solid #eef1ee;
 }
 
@@ -357,8 +395,9 @@ const iniciales = computed(() => {
   padding: 10px 12px;
   background: #f0f7f0;
   border: 1px solid #dbe7dc;
-  border-radius: 10px;
+  border-radius: 14px;
   color: #2e7d32;
+  box-shadow: 0 8px 22px rgba(29, 78, 38, 0.055);
 }
 
 .tarjeta-entorno__titulo {
@@ -375,7 +414,7 @@ const iniciales = computed(() => {
 
 // --- Pie de página ------------------------------------------------------------------
 .pie {
-  background: #ffffff;
+  background: rgba(255, 255, 255, 0.9);
   color: #7d8a80;
   border-top: 1px solid #e4e9e4;
   padding: 8px 18px;
@@ -386,6 +425,8 @@ const iniciales = computed(() => {
   gap: 6px;
   font-size: 12px;
   min-height: auto;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
 }
 
 .pie__izq {
@@ -406,9 +447,70 @@ const iniciales = computed(() => {
   display: inline-flex;
   align-items: center;
   gap: 5px;
+  max-width: min(38vw, 360px);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .pie__separador {
   color: #c2cbc3;
+}
+
+.enlace-menu {
+  position: relative;
+  min-height: 44px;
+  margin: 3px 10px;
+  border-radius: 13px;
+  color: #4f5f52;
+  transition:
+    color 0.2s ease,
+    background 0.2s ease,
+    transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1),
+    box-shadow 0.2s ease;
+
+  &:hover {
+    background: #f0f7f0;
+    color: #1b5e20;
+    transform: translateX(3px);
+  }
+
+  &.router-link-active {
+    background: linear-gradient(105deg, #e8f5e9, #f4faf4);
+    color: #17632e;
+    font-weight: 750;
+    box-shadow: inset 3px 0 0 #2e7d32, 0 4px 14px rgba(27, 94, 32, 0.06);
+  }
+
+  &.router-link-active :deep(.q-icon) {
+    color: #24733a;
+  }
+}
+
+.enlace-menu :deep(.q-icon) {
+  transition: transform 0.2s ease, color 0.2s ease;
+}
+
+.enlace-menu:hover :deep(.q-icon) {
+  transform: scale(1.08);
+}
+
+@media (max-width: 600px) {
+  .seccion-cabecera {
+    font-size: 0.82rem;
+  }
+
+  .pie {
+    padding: 10px 14px;
+  }
+
+  .pie__der {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+
+  .pie__item {
+    max-width: 78vw;
+  }
 }
 </style>
