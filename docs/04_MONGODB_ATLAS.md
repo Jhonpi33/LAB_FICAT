@@ -13,7 +13,7 @@
 | Decisión | Valor | Por qué |
 |---|---|---|
 | Motor | **MongoDB Atlas (plan M0 Free)** | Lo exige RNF-016 |
-| Nombre de la base | `laboratorio` | Un solo espacio para todo el sistema |
+| Nombre de la base | `labficat_dv` en Render para la rama `DV` | La base anterior `laboratorio` se conserva intacta |
 | Límite de almacenamiento | **512 MB** | Es el techo del plan M0 |
 | Archivos (adjuntos y PDF) | Se guardan **dentro de la misma BD** | RNF-016 prohíbe servicios externos de almacenamiento |
 | Respaldos | **Manuales** | M0 **no** incluye respaldos automáticos (RNF-008) |
@@ -43,12 +43,13 @@
 | Authentication Method | **Username and Password** |
 | Username | `lab_admin` |
 | Password | Generar una segura y **guardarla en un lugar seguro** |
-| Database User Privileges | **Read and write to `laboratorio`** |
+| Database User Privileges | **Read and write únicamente a la base de la aplicación** |
 
 > 🔒 **Esta contraseña nunca se escribe en el código ni se sube a GitHub.**
 > Vive solo en el archivo `.env`, que está en `.gitignore`.
-> Para reducir permisos, en un entorno compartido usa `readWrite` únicamente
-> sobre la base `laboratorio`, en lugar de privilegios sobre todas las bases.
+> La cuenta de servicio actual de Render es independiente del usuario `atlasAdmin`
+> existente. Figura con `readWriteAnyDatabase`; conviene restringirla a `readWrite`
+> sobre `labficat_dv` mediante un rol personalizado antes de usar datos reales.
 
 ---
 
@@ -74,10 +75,10 @@ mongodb+srv://lab_admin:<PASSWORD>@clusterlaboratorio.xxxxx.mongodb.net/?retryWr
 **Ajustes obligatorios:**
 
 1. Cambiar `<PASSWORD>` por la contraseña real.
-2. Usar el nombre de la base configurado por la aplicación (`laboratorio`):
+2. Usar el nombre de la base configurado por la aplicación (`labficat_dv` en Render/DV):
 
 ```
-mongodb+srv://lab_admin:<PASSWORD>@clusterlaboratorio.xxxxx.mongodb.net/laboratorio?retryWrites=true&w=majority&authSource=admin
+mongodb+srv://lab_admin:<PASSWORD>@clusterlaboratorio.xxxxx.mongodb.net/labficat_dv?retryWrites=true&w=majority&authSource=admin
 ```
 
 ---
@@ -87,8 +88,8 @@ mongodb+srv://lab_admin:<PASSWORD>@clusterlaboratorio.xxxxx.mongodb.net/laborato
 ### 5.1 Archivo `.env` (en la raíz del backend) 🔒
 
 ```env
-MONGO_URI=mongodb+srv://lab_admin:CONTRASENA_AQUI@clusterlaboratorio.xxxxx.mongodb.net/laboratorio?retryWrites=true&w=majority&authSource=admin
-MONGO_DATABASE=laboratorio
+MONGO_URI=mongodb+srv://lab_admin:CONTRASENA_AQUI@clusterlaboratorio.xxxxx.mongodb.net/labficat_dv?retryWrites=true&w=majority&authSource=admin
+MONGO_DATABASE=labficat_dv
 PORT=4000
 JWT_SECRET=cadena-larga-y-aleatoria-para-firmar-tokens
 JWT_EXPIRES=12h
@@ -98,8 +99,8 @@ NODE_ENV=development
 ### 5.2 Archivo `.env.example` (sí sube a GitHub)
 
 ```env
-MONGO_URI=mongodb+srv://USUARIO:CONTRASENA@TU_CLUSTER.mongodb.net/laboratorio?retryWrites=true&w=majority&authSource=admin
-MONGO_DATABASE=laboratorio
+MONGO_URI=mongodb+srv://USUARIO:CONTRASENA@TU_CLUSTER.mongodb.net/labficat_dv?retryWrites=true&w=majority&authSource=admin
+MONGO_DATABASE=labficat_dv
 PORT=4000
 JWT_SECRET=
 JWT_EXPIRES=12h
@@ -147,7 +148,7 @@ Si la API y MongoDB están disponibles, la respuesta indica `"estado":"operativo
 Como M0 **no** respalda solo, se hace a mano. En el Atlas CLI:
 
 ```bash
-mongodump "mongodb+srv://lab_admin:PASSWORD@TU_CLUSTER.mongodb.net/laboratorio" --out ./respaldos/$(date +%Y-%m-%d)
+mongodump "mongodb+srv://lab_admin:PASSWORD@TU_CLUSTER.mongodb.net/labficat_dv" --out ./respaldos/$(date +%Y-%m-%d)
 ```
 
 **Frecuencia sugerida:** al cerrar cada fase del proyecto.
