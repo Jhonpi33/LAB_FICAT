@@ -1,7 +1,12 @@
 import 'dotenv/config';
 
-const requeridas = ['MONGO_URI', 'JWT_SECRET'];
-const faltantes = requeridas.filter((v) => !process.env[v]);
+const mongoUri = (process.env.MONGO_URI || process.env.MONGODB_URI || '').trim();
+const jwtSecret = (process.env.JWT_SECRET || '').trim();
+const requeridas = [
+  ...(!mongoUri ? ['MONGO_URI (o MONGODB_URI)'] : []),
+  ...(!jwtSecret ? ['JWT_SECRET'] : [])
+];
+const faltantes = requeridas;
 
 if (faltantes.length > 0) {
   console.error(`Faltan variables obligatorias en el archivo .env: ${faltantes.join(', ')}`);
@@ -11,8 +16,9 @@ if (faltantes.length > 0) {
 
 export default {
   PORT: process.env.PORT || 4000,
-  MONGO_URI: process.env.MONGO_URI,
-  JWT_SECRET: process.env.JWT_SECRET,
+  MONGO_URI: mongoUri,
+  MONGO_DATABASE: process.env.MONGO_DATABASE || 'laboratorio',
+  JWT_SECRET: jwtSecret,
   JWT_EXPIRES: process.env.JWT_EXPIRES || '12h',
   FRONTEND_URL: process.env.FRONTEND_URL || 'http://localhost:5174',
   ADMIN_NOMBRE: process.env.ADMIN_NOMBRE || '',

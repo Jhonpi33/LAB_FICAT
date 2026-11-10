@@ -43,10 +43,12 @@
 | Authentication Method | **Username and Password** |
 | Username | `lab_admin` |
 | Password | Generar una segura y **guardarla en un lugar seguro** |
-| Database User Privileges | **Read and write to any database** |
+| Database User Privileges | **Read and write to `laboratorio`** |
 
 > 🔒 **Esta contraseña nunca se escribe en el código ni se sube a GitHub.**
 > Vive solo en el archivo `.env`, que está en `.gitignore`.
+> Para reducir permisos, en un entorno compartido usa `readWrite` únicamente
+> sobre la base `laboratorio`, en lugar de privilegios sobre todas las bases.
 
 ---
 
@@ -72,10 +74,10 @@ mongodb+srv://lab_admin:<PASSWORD>@clusterlaboratorio.xxxxx.mongodb.net/?retryWr
 **Ajustes obligatorios:**
 
 1. Cambiar `<PASSWORD>` por la contraseña real.
-2. Agregar el nombre de la base al final:
+2. Usar el nombre de la base configurado por la aplicación (`laboratorio`):
 
 ```
-mongodb+srv://lab_admin:<PASSWORD>@clusterlaboratorio.xxxxx.mongodb.net/laboratorio?retryWrites=true&w=majority
+mongodb+srv://lab_admin:<PASSWORD>@clusterlaboratorio.xxxxx.mongodb.net/laboratorio?retryWrites=true&w=majority&authSource=admin
 ```
 
 ---
@@ -85,20 +87,22 @@ mongodb+srv://lab_admin:<PASSWORD>@clusterlaboratorio.xxxxx.mongodb.net/laborato
 ### 5.1 Archivo `.env` (en la raíz del backend) 🔒
 
 ```env
-MONGO_URI=mongodb+srv://lab_admin:CONTRASENA_AQUI@clusterlaboratorio.xxxxx.mongodb.net/laboratorio?retryWrites=true&w=majority
-PUERTO=4000
-JWT_SECRETO=cadena-larga-y-aleatoria-para-firmar-tokens
-JWT_VIDA=8h
+MONGO_URI=mongodb+srv://lab_admin:CONTRASENA_AQUI@clusterlaboratorio.xxxxx.mongodb.net/laboratorio?retryWrites=true&w=majority&authSource=admin
+MONGO_DATABASE=laboratorio
+PORT=4000
+JWT_SECRET=cadena-larga-y-aleatoria-para-firmar-tokens
+JWT_EXPIRES=12h
 NODE_ENV=development
 ```
 
 ### 5.2 Archivo `.env.example` (sí sube a GitHub)
 
 ```env
-MONGO_URI=mongodb+srv://USUARIO:CONTRASENA@TU_CLUSTER.mongodb.net/laboratorio?retryWrites=true&w=majority
-PUERTO=4000
-JWT_SECRETO=
-JWT_VIDA=8h
+MONGO_URI=mongodb+srv://USUARIO:CONTRASENA@TU_CLUSTER.mongodb.net/laboratorio?retryWrites=true&w=majority&authSource=admin
+MONGO_DATABASE=laboratorio
+PORT=4000
+JWT_SECRET=
+JWT_EXPIRES=12h
 NODE_ENV=development
 ```
 
@@ -123,52 +127,20 @@ npm install -D nodemon
 
 ## 6. Verificar la conexión
 
-Crear `backend/src/config/db.js`:
-
-```js
-import mongoose from 'mongoose'
-import 'dotenv/config'
-
-export async function conectarBD() {
-  try {
-    await mongoose.connect(process.env.MONGO_URI)
-    console.log('✅ MongoDB Atlas conectado')
-  } catch (error) {
-    console.error('❌ Error al conectar con Atlas:', error.message)
-    process.exit(1)
-  }
-}
-```
-
-Y en `server.js`:
-
-```js
-import express from 'express'
-import 'dotenv/config'
-import { conectarBD } from './config/db.js'
-
-const app = express()
-app.use(express.json())
-app.get('/api/health', (req, res) => res.json({ ok: true, bd: 'conectada' }))
-
-await conectarBD()
-app.listen(process.env.PUERTO || 4000, () => {
-  console.log(`API escuchando en http://localhost:${process.env.PUERTO || 4000}`)
-})
-```
-
-**Verificación:**
+Desde la carpeta `backend`, inicia el servidor:
 
 ```bash
-node backend/src/server.js
-# ✅ MongoDB Atlas conectado
-# API escuchando en http://localhost:4000
-
-curl http://localhost:4000/api/health
-# {"ok":true,"bd":"conectada"}
+cd backend
+npm start
 ```
 
----
+En otra terminal consulta el estado:
+
+```bash
+curl http://localhost:4000/api/health
+```
+
+Si la API y MongoDB están disponibles, la respuesta indica `"estado":"operativo"` y `"baseDatos":"conectada"`. Si Atlas rechaza la conexión, la API permanece accesible, informa `"estado":"degradado"` y reintenta la conexión; las operaciones que requieren datos responden `503` hasta recuperarla.
 
 ## 7. Plan de respaldo manual (RNF-008)
 
@@ -198,7 +170,10 @@ mongodump "mongodb+srv://lab_admin:PASSWORD@TU_CLUSTER.mongodb.net/laboratorio" 
 | Error | Causa | Solución |
 |---|---|---|
 | `MongooseServerSelectionError: IP not allowed` | No se agregó la IP | Network Access → Allow `0.0.0.0/0` |
-| `Authentication failed` | Contraseña mal escrita o `@`/`:` sin codificar | Revisar el URI; los caracteres especiales van como `%40`, `%3A` |
-| `Invalid connection string` | Falta `/laboratorio` al final | Agregar el nombre de la BD antes de `?` |
-| `Buffering timed out` | El backend no llamó `mongoose.connect` antes de rutas | Conectar **antes** de `app.listen` |
+| `bad auth : authentication failed` | Atlas recibió una conexión, pero rechazó las credenciales | En **Database Access**, confirma el usuario de base de datos (no el usuario con el que inicias sesión en Atlas) y restablece su contraseña. En Render configura `MONGO_URI` con el valor nuevo. No agregues la contraseña al repositorio. |
+| `bad auth` con contraseña correcta | La contraseña contiene caracteres reservados | Codifica los caracteres reservados de usuario/contraseña en la URI (`@` → `%40`, `:` → `%3A`, `/` → `%2F`, etc.). |
+| `IP not allowed` / timeout de selección | Network Access List bloquea la salida de Render | En Atlas → Network Access, agrega las IP de salida de Render o temporalmente `0.0.0.0/0` para diagnosticar. Limita el acceso antes de producción. |
+| `Invalid connection string` | URI incompleta, con placeholder o caracteres sin codificar | Copia la URI de Drivers en Atlas, reemplaza usuario/contraseña y verifica que no quede `<PASSWORD>`. |
+| `/api/health` informa `baseDatos: desconectada` | El proceso web está arriba, pero Atlas no aceptó o aún no restableció la conexión | Revisa los logs de Render y corrige las credenciales o Network Access List; el backend reintenta automáticamente. Las rutas de negocio responden `503` hasta que Mongo conecte. |
+| `Buffering timed out` | Se intentó usar un modelo mientras Mongo estaba desconectado | Revisa `/api/health`; las rutas ya responden `503` claro mientras la conexión se recupera. |
 | `CORS error` en el navegador | Vite y Express en puertos distintos | `app.use(cors())` en el backend |

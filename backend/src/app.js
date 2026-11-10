@@ -19,6 +19,8 @@ import facturasRoutes from './routes/facturas.routes.js';
 import disposicionesRoutes from './routes/disposiciones.routes.js';
 import eventosRoutes from './routes/eventos.routes.js';
 import errorHandler from './middlewares/errorHandler.js';
+import mongoose from 'mongoose';
+import { requireDatabase } from './middlewares/database.js';
 
 const app = express();
 
@@ -28,8 +30,18 @@ app.use(cors({ origin: originsPermitidos, credentials: true }));
 app.use(express.json());
 
 app.get('/api/health', (req, res) => {
-  res.json({ ok: true, mensaje: 'API funcionando' });
+  const baseDatosConectada = mongoose.connection.readyState === 1;
+  res.json({
+    ok: true,
+    estado: baseDatosConectada ? 'operativo' : 'degradado',
+    api: 'conectada',
+    baseDatos: baseDatosConectada ? 'conectada' : 'desconectada'
+  });
 });
+
+// Permite que Render compruebe la API mientras Atlas se recupera, pero evita
+// que las rutas de negocio fallen con errores de Mongoose poco claros.
+app.use('/api', requireDatabase);
 
 app.use('/api/auth', authRoutes);
 app.use('/api/usuarios', usuariosRoutes);
