@@ -48,7 +48,7 @@ async function crear(data) {
     permiso_eliminar: false
   });
 
-  return usuario.toObject({ versionKey: false });
+  return { ...usuario.toObject({ versionKey: false }), password: undefined };
 }
 
 async function editar(id, data) {
@@ -62,6 +62,7 @@ async function editar(id, data) {
   if (otro) throw httpError(409, 'El email ya se encuentra registrado');
 
   usuario.nombre = data.nombre;
+  if (usuario.verificadoEn && usuario.email !== email) throw httpError(400, 'El correo verificado no puede modificarse desde este formulario.');
   usuario.email = email;
   if (data.rol) usuario.rol = data.rol;
   if (data.password) usuario.password = data.password;

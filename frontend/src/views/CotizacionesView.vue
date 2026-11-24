@@ -1,4 +1,5 @@
 <script setup>
+import FormatoInterno from '@/components/FormatoInterno.vue'
 /**
  * /views/CotizacionesView.vue
  * Cotizaciones: se generan desde una solicitud con ítems de parámetros
@@ -190,6 +191,7 @@ const guardarEstado = async () => {
 
         <template #body-cell-acciones="celda">
           <q-td :props="celda" class="text-right">
+            <FormatoInterno tipo="oferta" titulo="Oferta de servicios" :id="celda.row._id"/>
             <q-btn flat dense round size="sm" icon="swap_horiz" color="info" class="action-secondary" @click="abrirCambioEstado(celda.row)">
               <q-tooltip>Cambiar estado</q-tooltip>
             </q-btn>

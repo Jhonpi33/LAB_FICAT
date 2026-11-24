@@ -4,6 +4,9 @@ import { ROLES } from '../config/constants.js';
 
 const usuarioSchema = new mongoose.Schema(
   {
+    verificadoEn: Date,
+    aprendiz: { type: String, enum: ['pendiente', 'validado', 'externo', 'rechazado'] },
+    ficha: String,
     nombre: {
       type: String,
       required: [true, 'El nombre es obligatorio'],

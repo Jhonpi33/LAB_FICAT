@@ -39,8 +39,12 @@ api.interceptors.request.use((config) => {
  */
 api.interceptors.response.use(
   (respuesta) => respuesta,
-  (error) => {
-    const data = error.response?.data
+  async (error) => {
+    let data = error.response?.data
+    if (data instanceof Blob && data.type.startsWith('application/json')) {
+      try { data = JSON.parse(await data.text()) }
+      catch { data = null }
+    }
 
     // El validador del backend devuelve errores: [{ campo, msg }]; aquí se
     // convierten a strings para poder unirlos con " · " en las notificaciones.

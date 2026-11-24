@@ -1,4 +1,6 @@
 <script setup>
+import FormatoInterno from '@/components/FormatoInterno.vue'
+import RecepcionDialog from '@/components/RecepcionDialog.vue'
 /**
  * /views/MuestrasView.vue
  * Recepción de muestras: registro, código automático y aceptación/rechazo.
@@ -8,7 +10,8 @@ import { computed, onMounted, ref, watch } from 'vue'
 import EncabezadoPagina from '@/components/Encabezados/EncabezadoPagina.vue'
 import TablaDatos from '@/components/Tables/TablaDatos.vue'
 
-import { get, post, patch } from '@/services/api.service'
+import { get, patch } from '@/services/api.service'
+import api from '@/plugins/axios'
 import { useGeneralStore } from '@/store/General'
 import { useNotificar } from '@/composables/useNotificar'
 import { useConfirmar } from '@/composables/useConfirmar'
@@ -16,8 +19,29 @@ import { formatDate } from '@/utils/formatDate'
 import { requerido, seleccionRequerida, enteroMayorA } from '@/utils/reglas'
 
 const general = useGeneralStore()
-const { notificarOk, notificarError } = useNotificar()
+const { notificarOk, notificarError, notificarInfo } = useNotificar()
 const { confirmar } = useConfirmar()
+const recepcionAbierta = ref(false)
+const muestraParaFirma = ref(null)
+const enviandoConfirmacion = ref(null)
+
+function abrirFormato(muestra) {
+  muestraParaFirma.value = muestra._id
+  recepcionAbierta.value = true
+}
+
+async function reintentarConfirmacion(muestra) {
+  enviandoConfirmacion.value = muestra._id
+  try {
+    const { data } = await api.post('/muestras/' + muestra._id + '/confirmacion', {}, { timeout: 30000 })
+    muestra.confirmacion_enviada = data.datos.fecha
+    notificarOk(data.mensaje)
+  } catch (error) {
+    notificarError(error)
+  } finally {
+    enviandoConfirmacion.value = null
+  }
+}
 
 const TIPO_FISICO = [
   { label: 'Sólido', value: 'solido' },
@@ -114,9 +138,11 @@ const guardar = async () => {
       verificacion_fisica: formulario.value.verificacion_fisica,
     }
 
-    const respuesta = await post('/muestras', datos)
+    const { data: respuesta } = await api.post('/muestras', datos, { timeout: 30000 })
     notificarOk(`Muestra registrada con el código ${respuesta.datos.codigo}`)
+    if (respuesta.datos.avisoCorreo) notificarInfo(respuesta.datos.avisoCorreo)
     dialogo.value = false
+    abrirFormato(respuesta.datos)
     await cargar()
   } catch (e) {
     notificarError(e)
@@ -240,6 +266,14 @@ const avanzarEtapa = async (muestra) => {
 
         <template #body-cell-acciones="celda">
           <q-td :props="celda" class="text-right">
+            <q-btn flat dense no-caps color="primary" icon="draw" label="Recepción y firma" @click="abrirFormato(celda.row)" />
+            <q-btn v-if="!celda.row.confirmacion_enviada" flat dense round icon="mail_outline" color="primary"
+              aria-label="Enviar confirmación de registro" :loading="enviandoConfirmacion === celda.row._id"
+              :disable="Boolean(enviandoConfirmacion)" @click="reintentarConfirmacion(celda.row)">
+              <q-tooltip>Enviar confirmación de registro</q-tooltip>
+            </q-btn>
+            <FormatoInterno tipo="maestro" titulo="Listado maestro" :id="celda.row._id"/>
+            <FormatoInterno tipo="orden" titulo="Orden de servicios" :id="celda.row._id"/>
             <template v-if="celda.row.estado_recepcion === 'pendiente'">
               <q-btn flat dense round size="sm" icon="check" color="positive" class="action-secondary" @click="aceptar(celda.row)">
                 <q-tooltip>Aceptar recepción</q-tooltip>
@@ -262,6 +296,8 @@ const avanzarEtapa = async (muestra) => {
         </template>
       </TablaDatos>
     </div>
+
+    <RecepcionDialog v-model="recepcionAbierta" :muestra="muestraParaFirma" />
 
     <!-- Formulario de registro de muestra -->
     <q-dialog v-model="dialogo" persistent @show="formularioRef?.resetValidation()">

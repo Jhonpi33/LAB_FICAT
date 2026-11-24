@@ -1,15 +1,6 @@
 import * as service from '../services/auth.service.js';
 import { ok } from '../utils/responses.js';
 
-async function registro(req, res, next) {
-  try {
-    const datos = await service.registro(req.body);
-    return ok(res, datos, 'Usuario registrado correctamente');
-  } catch (err) {
-    next(err);
-  }
-}
-
 async function login(req, res, next) {
   try {
     const datos = await service.login(req.body.email, req.body.password);
@@ -37,4 +28,4 @@ async function actualizarPerfil(req, res, next) {
   }
 }
 
-export { registro, login, me, actualizarPerfil };
+export { login, me, actualizarPerfil };

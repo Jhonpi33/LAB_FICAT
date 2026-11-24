@@ -38,6 +38,8 @@ const EncuestaView = () => import('@/views/EncuestaView.vue')
 const NotFoundView = () => import('@/views/NotFoundView.vue')
 
 const routes = [
+  { path: '/crear-cuenta/:token?', component: () => import('@/views/RegistroView.vue'), meta: { titulo: 'Crear cuenta' } },
+  { path: '/firmar/:token', component: () => import('@/views/FirmaView.vue'), meta: { titulo: 'Firmar solicitud' } },
   {
     path: '/',
     name: 'login',

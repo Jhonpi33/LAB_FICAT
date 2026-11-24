@@ -45,6 +45,8 @@ const muestraSchema = new mongoose.Schema(
     motivo_rechazo: { type: String, default: '' },
     codigo: { type: String, default: null, unique: true, sparse: true },
     codigo_seguimiento: { type: String, default: null, unique: true, sparse: true },
+    confirmacion_enviada: Date,
+    confirmacion_intento: Date,
     estado: {
       type: String,
       enum: {

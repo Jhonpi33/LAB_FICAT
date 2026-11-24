@@ -5,12 +5,11 @@ const regRules = [
     .trim()
     .isLength({ min: 3, max: 120 })
     .withMessage('El nombre debe tener entre 3 y 120 caracteres'),
-  body('email')
-    .trim()
-    .isEmail()
-    .withMessage('El email no es valido')
-    .normalizeEmail(),
   body('password')
+    .isString()
+    .bail()
+    .custom(valor => Buffer.byteLength(valor) <= 72)
+    .withMessage('La contraseña supera el máximo de 72 bytes')
     .isLength({ min: 8 })
     .withMessage('La contrasena debe tener minimo 8 caracteres')
     .matches(/\d/)
@@ -22,7 +21,7 @@ const loginRules = [
     .trim()
     .isEmail()
     .withMessage('El email no es valido')
-    .normalizeEmail(),
+    .customSanitizer(email => String(email).toLowerCase()),
   body('password')
     .notEmpty()
     .withMessage('La contrasena es obligatoria')
@@ -37,7 +36,7 @@ const perfilRules = [
     .trim()
     .isEmail()
     .withMessage('El email no es valido')
-    .normalizeEmail(),
+    .customSanitizer(email => String(email).toLowerCase()),
   body('password')
     .optional({ nullable: true })
     .custom((valor) => {

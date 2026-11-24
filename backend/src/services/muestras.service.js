@@ -2,6 +2,8 @@ import mongoose from 'mongoose';
 import Muestra from '../models/Muestra.js';
 import Solicitud from '../models/Solicitud.js';
 import AnalisisMuestra from '../models/AnalisisMuestra.js';
+import Cliente from '../models/Cliente.js';
+import { enviarCorreo, enlace } from './correo.service.js';
 import { generarCodigoMuestra, generarCodigoSeguimiento } from './secuencias.service.js';
 import { registrarEvento } from './eventos.service.js';
 import { crearIniciales } from './analisis.service.js';
@@ -75,6 +77,40 @@ async function crear(data, usuario) {
   });
 
   return conRelaciones(muestra);
+}
+
+async function enviarConfirmacion(id) {
+  validarId(id);
+  const intento = new Date();
+  const muestra = await Muestra.findOneAndUpdate({
+    _id: id, eliminado: false, confirmacion_enviada: null,
+    $or: [{ confirmacion_intento: null }, { confirmacion_intento: { $lt: new Date(+intento - 60000) } }]
+  }, { confirmacion_intento: intento });
+  if (!muestra) {
+    const existente = await Muestra.findOne({ _id: id, eliminado: false }).select('confirmacion_enviada');
+    if (!existente) throw httpError(404, 'Muestra no encontrada.');
+    if (existente.confirmacion_enviada) return existente.confirmacion_enviada;
+    throw httpError(409, 'El correo de confirmación ya se está procesando.');
+  }
+
+  try {
+    const cliente = await Cliente.findOne({ _id: muestra.cliente_id, eliminado: false }).select('email nombre');
+    if (!cliente?.email) throw httpError(400, 'Registra un correo para el cliente antes de enviar la confirmación.');
+    if (!muestra.codigo_seguimiento) throw httpError(400, 'La muestra no tiene código de seguimiento.');
+    await enviarCorreo(cliente.email, 'LABFICAT · Muestra registrada ' + muestra.codigo,
+      'Hola ' + cliente.nombre + ',\n\nRegistramos tu muestra ' + muestra.nombre_muestra + ' con el código ' + muestra.codigo
+      + '. La aceptación para análisis se confirma por separado.\n\nConsulta su estado: ' + enlace('seguimiento', muestra.codigo_seguimiento)
+      + '\nCódigo de seguimiento: ' + muestra.codigo_seguimiento);
+  } catch (error) {
+    await Muestra.updateOne({ _id: id, confirmacion_intento: intento }, { $unset: { confirmacion_intento: 1 } });
+    throw error;
+  }
+
+  const fecha = new Date();
+  await Muestra.updateOne({ _id: id, confirmacion_intento: intento }, {
+    $set: { confirmacion_enviada: fecha }, $unset: { confirmacion_intento: 1 }
+  });
+  return fecha;
 }
 
 /**
@@ -192,4 +228,4 @@ async function avanzarEtapa(id, { etapa }, usuario) {
   return conRelaciones(muestra);
 }
 
-export { listar, crear, recepcion, avanzarEtapa };
+export { listar, crear, recepcion, avanzarEtapa, enviarConfirmacion };

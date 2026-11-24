@@ -17,14 +17,6 @@ function datosPublicos(u) {
   };
 }
 
-async function registro({ nombre, email, password }) {
-  const existe = await Usuario.findOne({ email });
-  if (existe) throw httpError(409, 'El email ya se encuentra registrado');
-
-  const usuario = await Usuario.create({ nombre, email, password, rol: 'usuario' });
-  return datosPublicos(usuario);
-}
-
 async function login(email, password) {
   const usuario = await Usuario.findOne({ email }).select('+password');
 
@@ -72,6 +64,7 @@ async function actualizarPerfil(id, data) {
   if (otro) throw httpError(409, 'El email ya se encuentra registrado');
 
   usuario.nombre = data.nombre;
+  if (usuario.verificadoEn && usuario.email !== email) throw httpError(400, 'El correo verificado no puede modificarse desde este formulario.');
   usuario.email = email;
   if (data.password) usuario.password = data.password;
 
@@ -79,4 +72,4 @@ async function actualizarPerfil(id, data) {
   return datosPublicos(usuario);
 }
 
-export { registro, login, me, actualizarPerfil };
+export { login, me, actualizarPerfil };

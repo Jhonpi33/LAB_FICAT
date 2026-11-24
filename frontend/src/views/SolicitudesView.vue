@@ -10,6 +10,7 @@
 import { computed, onMounted, ref } from 'vue'
 
 import EncabezadoPagina from '@/components/Encabezados/EncabezadoPagina.vue'
+import RecepcionDialog from '@/components/RecepcionDialog.vue'
 import TablaDatos from '@/components/Tables/TablaDatos.vue'
 
 import { get, post, put, patch } from '@/services/api.service'
@@ -20,6 +21,13 @@ import { requerido, seleccionRequerida } from '@/utils/reglas'
 
 const general = useGeneralStore()
 const { notificarOk, notificarError } = useNotificar()
+
+const recepcionAbierta = ref(false)
+const recepcionSolicitud = ref(null)
+function abrirRecepcion(id) {
+  recepcionSolicitud.value = id
+  recepcionAbierta.value = true
+}
 
 const PRIORIDADES = [
   { label: 'Baja', value: 'baja' },
@@ -281,6 +289,7 @@ const estadoLabel = (e) => ESTADOS.find((x) => x.value === e)?.label || e
 
         <template #body-cell-acciones="celda">
           <q-td :props="celda" class="text-right">
+            <q-btn flat dense no-caps color="primary" icon="description" label="Recepción" @click="abrirRecepcion(celda.row._id)" />
             <q-btn flat dense round size="sm" icon="swap_horiz" color="info" class="action-secondary" @click="abrirCambioEstado(celda.row)">
               <q-tooltip>Cambiar estado</q-tooltip>
             </q-btn>
@@ -291,6 +300,8 @@ const estadoLabel = (e) => ESTADOS.find((x) => x.value === e)?.label || e
         </template>
       </TablaDatos>
     </div>
+
+    <RecepcionDialog v-model="recepcionAbierta" :solicitud="recepcionSolicitud" />
 
     <!-- Formulario crear/editar -->
     <q-dialog v-model="dialogo" persistent @show="formularioRef?.resetValidation()">

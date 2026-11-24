@@ -113,6 +113,9 @@ const guardar = async () => {
       ? await put(`/clientes/${clienteEditando.value._id}`, datos)
       : await post('/clientes', datos)
 
+    const id = respuesta.datos?._id
+    const yaExiste = clientes.value.some(cliente => cliente._id === id)
+    if (!yaExiste && id) clientes.value.unshift(respuesta.datos)
     notificarOk(respuesta.mensaje)
     dialogo.value = false
     await cargar()

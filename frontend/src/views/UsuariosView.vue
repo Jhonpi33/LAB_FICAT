@@ -32,6 +32,7 @@ const columnas = [
   { name: 'nombre', label: 'Nombre', field: 'nombre', align: 'left', sortable: true },
   { name: 'email', label: 'Email', field: 'email', align: 'left', sortable: true },
   { name: 'rol', label: 'Rol', field: 'rol', align: 'center', sortable: true },
+  { name: 'aprendiz', label: 'Aprendiz', field: 'aprendiz', align: 'left' },
   { name: 'activo', label: 'Estado', field: 'activo', align: 'center', sortable: true },
   { name: 'fecha_creacion', label: 'Creado', field: 'fecha_creacion', align: 'left', sortable: true, format: (v) => formatDate(v) },
   { name: 'acciones', label: 'Acciones', field: 'acciones', align: 'right' },
@@ -57,6 +58,10 @@ const cargar = async () => {
   }
 }
 
+async function revisarFicha(id, estado) {
+  try { await patch('/usuarios/' + id + '/aprendiz', { estado }); await cargar() }
+  catch (e) { notificarError(e) }
+}
 onMounted(cargar)
 
 // --- Formulario crear/editar ------------------------------------------------
@@ -177,6 +182,15 @@ const cambiarEstado = async (usuario) => {
           </q-td>
         </template>
 
+        <template #body-cell-aprendiz="celda">
+          <q-td :props="celda">
+            {{ celda.row.aprendiz || 'Sin clasificar' }} {{ celda.row.ficha ? ' · Ficha ' + celda.row.ficha : '' }}
+            <div v-if="celda.row.aprendiz === 'pendiente'">
+              <q-btn flat dense color="primary" label="Validar ficha" @click="revisarFicha(celda.row._id, 'validado')"/>
+              <q-btn flat dense label="Rechazar" @click="revisarFicha(celda.row._id, 'rechazado')"/>
+            </div>
+          </q-td>
+        </template>
         <template #body-cell-activo="celda">
           <q-td :props="celda" class="text-center">
             <q-badge :color="celda.row.activo ? 'positive' : 'grey-6'" :label="celda.row.activo ? 'Activo' : 'Inactivo'" />

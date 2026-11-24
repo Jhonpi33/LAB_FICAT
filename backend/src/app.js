@@ -2,6 +2,8 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import config from './config/env.js';
+import formatosRoutes from './routes/formatos.routes.js';
+import firmasRoutes from './routes/firmas.routes.js';
 import authRoutes from './routes/auth.routes.js';
 import usuariosRoutes from './routes/usuarios.routes.js';
 import clientesRoutes from './routes/clientes.routes.js';
@@ -27,6 +29,7 @@ const app = express();
 app.use(helmet());
 const originsPermitidos = config.FRONTEND_URL.split(',').map((origin) => origin.trim()).filter(Boolean);
 app.use(cors({ origin: originsPermitidos, credentials: true }));
+app.use('/api/firmas', express.json({ limit: '1500kb' }));
 app.use(express.json());
 
 app.get('/api/health', (req, res) => {
@@ -43,6 +46,8 @@ app.get('/api/health', (req, res) => {
 // que las rutas de negocio fallen con errores de Mongoose poco claros.
 app.use('/api', requireDatabase);
 
+app.use('/api/formatos', formatosRoutes);
+app.use('/api/firmas', firmasRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/usuarios', usuariosRoutes);
 app.use('/api/clientes', clientesRoutes);

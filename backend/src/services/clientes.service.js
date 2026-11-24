@@ -28,15 +28,20 @@ async function crear(data) {
   const existe = await Cliente.findOne({ numero_documento, eliminado: false });
   if (existe) throw httpError(409, 'Ya existe un cliente con ese numero de documento');
 
-  return Cliente.create({
-    nombre: data.nombre,
-    tipo_documento: data.tipo_documento,
-    numero_documento,
-    email: String(data.email).toLowerCase(),
-    telefono: data.telefono || '',
-    direccion: data.direccion || '',
-    tipo_cliente: data.tipo_cliente
-  });
+  try {
+    return await Cliente.create({
+      nombre: data.nombre,
+      tipo_documento: data.tipo_documento,
+      numero_documento,
+      email: String(data.email).toLowerCase(),
+      telefono: data.telefono || '',
+      direccion: data.direccion || '',
+      tipo_cliente: data.tipo_cliente
+    });
+  } catch (error) {
+    if (error.code === 11000) throw httpError(409, 'Ya existe un cliente con ese número de documento.');
+    throw error;
+  }
 }
 
 async function editar(id, data) {
@@ -57,7 +62,12 @@ async function editar(id, data) {
   cliente.direccion = data.direccion || '';
   cliente.tipo_cliente = data.tipo_cliente;
 
-  await cliente.save();
+  try {
+    await cliente.save();
+  } catch (error) {
+    if (error.code === 11000) throw httpError(409, 'Ya existe un cliente con ese número de documento.');
+    throw error;
+  }
   return cliente;
 }
 

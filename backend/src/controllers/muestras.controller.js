@@ -13,7 +13,14 @@ async function listar(req, res, next) {
 async function crear(req, res, next) {
   try {
     const datos = await service.crear(req.body, req.usuario);
-    return ok(res, datos, 'Muestra registrada correctamente');
+    let avisoCorreo;
+    try {
+      datos.confirmacion_enviada = await service.enviarConfirmacion(datos._id);
+    } catch (error) {
+      avisoCorreo = error.status && error.status < 500 ? error.message
+        : 'La muestra quedó guardada. El correo está pendiente. Puedes reintentar desde Muestras.';
+    }
+    return ok(res, { ...datos.toObject(), avisoCorreo }, 'Muestra registrada correctamente');
   } catch (err) {
     next(err);
   }
@@ -37,4 +44,11 @@ async function avanzarEtapa(req, res, next) {
   }
 }
 
-export { listar, crear, recepcion, avanzarEtapa };
+async function enviarConfirmacion(req, res, next) {
+  try {
+    const fecha = await service.enviarConfirmacion(req.params.id);
+    return ok(res, { fecha }, 'El correo de confirmación figura como enviado.');
+  } catch (error) { next(error); }
+}
+
+export { listar, crear, recepcion, avanzarEtapa, enviarConfirmacion };

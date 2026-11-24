@@ -19,6 +19,7 @@ import { useNotificar } from '@/composables/useNotificar'
 import { requerido, esEmail } from '@/utils/reglas'
 import logoSena from '@/assets/logo-sena.svg'
 
+const mostrarDemo = import.meta.env.DEV
 const router = useRouter()
 const auth = useAuthStore()
 const general = useGeneralStore()
@@ -189,11 +190,12 @@ const iniciarSesion = async () => {
               />
             </q-card-actions>
           </q-form>
+          <q-btn flat no-caps color="primary" to="/crear-cuenta" label="Crear cuenta" class="q-ma-sm"/>
 
           <q-separator />
 
           <q-card-section class="text-caption texto-suave">
-            <div class="cuentas-demo">
+            <div v-if="mostrarDemo" class="cuentas-demo">
               <q-icon name="badge" size="14px" class="q-mr-xs" />
               Cuentas de demostración
               <div class="cuentas-demo__lista">

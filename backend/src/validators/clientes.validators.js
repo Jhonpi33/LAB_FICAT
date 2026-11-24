@@ -20,7 +20,7 @@ const emailRule = body('email')
   .trim()
   .isEmail()
   .withMessage('El email no es válido')
-  .normalizeEmail();
+  .customSanitizer(email => String(email).toLowerCase());
 
 const telefonoRule = body('telefono')
   .optional({ values: 'falsy' })
