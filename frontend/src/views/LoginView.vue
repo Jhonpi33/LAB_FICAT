@@ -13,10 +13,12 @@ import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 
 import { post } from '@/services/api.service'
+import api from '@/plugins/axios'
 import { useAuthStore } from '@/store/Auth'
 import { useGeneralStore } from '@/store/General'
 import { useNotificar } from '@/composables/useNotificar'
 import { requerido, esEmail } from '@/utils/reglas'
+import { mostrarSalpicadura } from '@/splash/controlador'
 import logoSena from '@/assets/logo-sena.svg'
 
 const mostrarDemo = import.meta.env.DEV
@@ -29,6 +31,42 @@ const formulario = ref({ email: '', password: '' })
 const verPassword = ref(false)
 const enviando = ref(false)
 
+/** Etiqueta legible del rol, igual que en /views/PanelView.vue. */
+function rolLegible() {
+  if (auth.esAdmin) return 'Administrador'
+  if (auth.rol === 'encargado') return 'Encargado'
+  return auth.rol || ''
+}
+
+/**
+ * Resuelve cuando el panel haya terminado de traer sus datos del backend.
+ *
+ * La señal es general.ultimaSincronizacion, que PanelView actualiza con
+ * general.marcarSincronizacion() justo después de su Promise.all de 6
+ * peticiones. Se compara contra el valor previo a navegar para detectar el
+ * CAMBIO, no el valor en sí.
+ *
+ * Lleva su propio tope: si el panel fallara y nunca llegara a marcar, se
+ * resuelve igual para no dejar un intervalo corriendo para siempre.
+ *
+ * @param {Date | null} sincronizacionPrevia
+ * @returns {Promise<void>}
+ */
+function esperarDatosDelPanel(sincronizacionPrevia) {
+  return new Promise((resolver) => {
+    const tope = setTimeout(finalizar, 6000)
+    const intervalo = setInterval(() => {
+      if (general.ultimaSincronizacion !== sincronizacionPrevia) finalizar()
+    }, 120)
+
+    function finalizar() {
+      clearTimeout(tope)
+      clearInterval(intervalo)
+      resolver()
+    }
+  })
+}
+
 const iniciarSesion = async () => {
   enviando.value = true
 
@@ -40,8 +78,28 @@ const iniciarSesion = async () => {
 
     auth.guardarSesion(respuesta.datos)
 
-    notificarOk(`Bienvenido, ${auth.nombreUsuario}`)
-    router.push({ name: 'panel' })
+    // --- PANTALLA DE CARGA — 2.º USO ---------------------------------------
+    // Sale aquí para cubrir la transición al panel: se queda en pantalla
+    // hasta que la ruta esté resuelta y el panel haya traído sus datos.
+    const sincronizacionPrevia = general.ultimaSincronizacion
+
+    mostrarSalpicadura({
+      router,
+      apiUrl: api.defaults.baseURL,
+      contexto: {
+        estado: 'Preparando tu panel…',
+        sesion: { nombre: auth.nombreUsuario, rol: rolLegible() },
+      },
+      // PanelView solo trae datos cuando el usuario es personal del
+      // laboratorio; si no lo es, el panel se pinta al instante y no hay
+      // nada que esperar además de la navegación.
+      senales: [auth.esStaff ? esperarDatosDelPanel(sincronizacionPrevia) : Promise.resolve()],
+      // El aviso se emite al FINAL: mientras la pintura cubre la pantalla no
+      // se llegaría a ver.
+      alTerminar: () => notificarOk(`Bienvenido, ${auth.nombreUsuario}`),
+    })
+
+    await router.push({ name: 'panel' })
   } catch (e) {
     notificarError(e)
   } finally {

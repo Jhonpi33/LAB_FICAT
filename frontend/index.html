@@ -9,9 +9,414 @@
       content="Sistema de Gestión para el Servicio de Análisis de Laboratorio del SENA."
     />
     <title>Laboratorio de Alimentos · SENA</title>
+
+    <!-- ==========================================================================
+         PANTALLA DE CARGA — "salpicadura de pintura"
+
+         Va AQUÍ y no en un componente Vue a propósito: estos estilos se pintan
+         ANTES de que se descargue el bundle de JavaScript, así que en conexiones
+         lentas no hay ni un instante de pantalla en blanco.
+
+         Ciclo de vida:
+           1. La pintura salpica desde el centro y cubre la pantalla.
+           2. Espera a que la ruta inicial, la API y los recursos estén listos
+              (su duración depende de la velocidad del internet) o 6 s máximo.
+           3. Se desliza hacia abajo y se ELIMINA del DOM.
+              No queda ni un signo: ni el nodo, ni este <style>, ni el bloqueo
+              de scroll. Quien la retira es /src/splash/controlador.js y, si el
+              bundle nunca llegara, el respaldo de <script> de este mismo archivo.
+         ========================================================================== -->
+
+    <style>
+      /* --- Contenedor ------------------------------------------------------- */
+      #salpicadura {
+        position: fixed;
+        inset: 0;
+        z-index: 2147483000; /* por encima de todo lo que pueda montar Quasar */
+        display: grid;
+        place-items: center;
+        background: #f4f8f5; /* fondo suave mientras entra la pintura */
+        overflow: hidden;
+        will-change: transform;
+      }
+
+      /* --- La pintura --------------------------------------------------------
+         clip-path con un polígono irregular de 12 vértices. Se anima desde una
+         mancha diminuta en el centro hasta una forma que sobrepasa los cuatro
+         esquinas, con lo que el borde queda desigual: eso es lo que produce la
+         sensación de salpicadura en lugar de un círculo limpio.                  */
+      .salpicadura__pintura {
+        position: absolute;
+        inset: 0;
+        background:
+          radial-gradient(120% 95% at 50% 38%, #3d8b40 0%, #2e7d32 45%, #1b5e20 100%);
+        clip-path: polygon(
+          54.25% 50%, 54.33% 52.5%, 51.95% 53.38%, 50% 55.6%,
+          47.8% 53.81%, 45.45% 52.63%, 45.9% 50%, 45.02% 47.13%,
+          47.9% 46.36%, 50% 45.2%, 51.88% 46.75%, 54.68% 47.3%
+        );
+        animation: salpicadura-salpicar 850ms cubic-bezier(0.2, 0.9, 0.25, 1) forwards;
+      }
+
+      @keyframes salpicadura-salpicar {
+        to {
+          clip-path: polygon(
+            135% 50%, 136.6% 100%, 89% 117.6%, 50% 162%,
+            6% 126.2%, -40.9% 102.5%, -32% 50%, -49.6% -7.5%,
+            8% -22.7%, 50% -46%, 87.5% -15%, 143.5% -4%
+          );
+        }
+      }
+
+      /* --- Goteos: chorros de pintura corriendo hacia abajo ------------------ */
+      .salpicadura__goteo {
+        position: absolute;
+        top: 0;
+        left: var(--x);
+        width: var(--w);
+        height: 26%;
+        border-radius: 0 0 999px 999px;
+        background: linear-gradient(
+          180deg,
+          rgba(255, 255, 255, 0) 0%,
+          rgba(255, 255, 255, 0.16) 70%,
+          rgba(255, 255, 255, 0.26) 100%
+        );
+        opacity: 0;
+        pointer-events: none;
+        animation: salpicadura-goteo var(--dur) ease-in-out var(--del) infinite;
+      }
+
+      @keyframes salpicadura-goteo {
+        0% {
+          transform: translateY(-45%);
+          opacity: 0;
+        }
+        18% {
+          opacity: 0.95;
+        }
+        72% {
+          opacity: 0.5;
+        }
+        100% {
+          transform: translateY(370%);
+          opacity: 0;
+        }
+      }
+
+      /* --- Contenido: logo, título y barra ----------------------------------- */
+      .salpicadura__contenido {
+        position: relative;
+        z-index: 2;
+        display: grid;
+        justify-items: center;
+        gap: clamp(9px, 2vh, 14px);
+        text-align: center;
+        padding: 0 24px;
+        animation: salpicadura-aparece 520ms 480ms ease-out both;
+      }
+
+      @keyframes salpicadura-aparece {
+        from {
+          opacity: 0;
+          transform: translateY(16px) scale(0.94);
+        }
+        to {
+          opacity: 1;
+          transform: none;
+        }
+      }
+
+      /* --- LOGO SENA: el PROTAGONISTA de la pantalla --------------------------
+         El logotipo oficial es verde (#2e7d32), el mismo tono que la pintura,
+         así que va dentro de una pastilla blanca. Es el elemento MÁS GRANDE de
+         la pantalla: es lo que debe "pronunciarse". Va inlineado en el HTML
+         (sin petición de red) para que aparezca junto con el resto de la
+         pintura, antes de que exista el más mínimo JavaScript.                  */
+      .salpicadura__logo {
+        width: clamp(134px, 36vw, 172px);
+        height: clamp(134px, 36vw, 172px);
+        padding: clamp(15px, 4vw, 21px);
+        border-radius: 44px;
+        background: #fff;
+        box-shadow:
+          0 24px 54px rgba(0, 0, 0, 0.36),
+          0 0 0 7px rgba(255, 255, 255, 0.16);
+      }
+
+      .salpicadura__logo svg {
+        display: block;
+        width: 100%;
+        height: 100%;
+      }
+
+      /* --- Wordmark del sistema ---------------------------------------------- */
+      .salpicadura__marca {
+        margin: 4px 0 0;
+        color: #fff;
+        font-size: clamp(1.4rem, 4.4vw, 2rem);
+        font-weight: 800;
+        letter-spacing: 0.18em;
+        text-indent: 0.18em;
+        text-transform: uppercase;
+        text-shadow: 0 2px 14px rgba(0, 0, 0, 0.34);
+      }
+
+      /* Nombre completo del sistema (el detalle). */
+      .salpicadura__titulo {
+        margin: -2px 0 0;
+        max-width: 32ch;
+        color: rgba(255, 255, 255, 0.95);
+        font-size: clamp(0.82rem, 2.3vw, 0.97rem);
+        font-weight: 500;
+        line-height: 1.5;
+      }
+
+      /* Regla fina entre el nombre y el eslogan. */
+      .salpicadura__regla {
+        width: 84px;
+        height: 2px;
+        margin: 3px 0;
+        border-radius: 999px;
+        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.8), transparent);
+      }
+
+      .salpicadura__eslogan {
+        margin: -2px 0 0;
+        color: rgba(255, 255, 255, 0.76);
+        font-size: clamp(0.76rem, 2.1vw, 0.88rem);
+        font-style: italic;
+      }
+
+      /* --- Estado: el controlador escribe aquí qué se está cargando --------- */
+      .salpicadura__estado {
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        margin: 6px 0 0;
+        color: #fff;
+        font-size: clamp(0.8rem, 2.2vw, 0.93rem);
+        font-weight: 600;
+      }
+
+      .salpicadura__estado::before {
+        content: '';
+        flex: none;
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: #a5d6a7;
+        box-shadow: 0 0 0 0 rgba(165, 214, 167, 0.75);
+        animation: salpicadura-pulso 1.6s ease-out infinite;
+      }
+
+      @keyframes salpicadura-pulso {
+        70% {
+          box-shadow: 0 0 0 9px rgba(165, 214, 167, 0);
+        }
+        100% {
+          box-shadow: 0 0 0 0 rgba(165, 214, 167, 0);
+        }
+      }
+
+      /* --- Sesión: SOLO se muestra después de iniciar sesión ----------------- */
+      .salpicadura__sesion {
+        display: none;
+        align-items: center;
+        gap: 7px;
+        margin: 0;
+        padding: 6px 15px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.15);
+        border: 1px solid rgba(255, 255, 255, 0.26);
+        color: #fff;
+        font-size: clamp(0.74rem, 2vw, 0.85rem);
+      }
+
+      .salpicadura__sesion[data-visible='1'] {
+        display: inline-flex;
+      }
+
+      .salpicadura__sesion b {
+        font-weight: 700;
+      }
+
+      .salpicadura__sesion span {
+        color: rgba(255, 255, 255, 0.72);
+      }
+
+      /* Barra indeterminada: no hay porcentaje real, solo actividad. */
+      .salpicadura__barra {
+        width: min(230px, 62vw);
+        height: 4px;
+        margin-top: 6px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.28);
+        overflow: hidden;
+      }
+
+      .salpicadura__barra i {
+        display: block;
+        width: 42%;
+        height: 100%;
+        border-radius: 999px;
+        background: #fff;
+        animation: salpicadura-barra 1.15s ease-in-out infinite;
+      }
+
+      @keyframes salpicadura-barra {
+        0% {
+          transform: translateX(-115%);
+        }
+        100% {
+          transform: translateX(285%);
+        }
+      }
+
+      /* --- Salida: se desliza hacia abajo y desaparece ------------------------
+         Se activa poniendo data-salida="1" desde el controlador. El nodo entero
+         baja fuera del viewport; los goteos se estiran un poco más para dejar
+         la sensación de que la pintura arrastra al salir.                       */
+      #salpicadura[data-salida='1'] {
+        animation: salpicadura-salida 750ms cubic-bezier(0.65, 0, 0.35, 1) forwards;
+      }
+
+      @keyframes salpicadura-salida {
+        to {
+          transform: translateY(100%);
+        }
+      }
+
+      #salpicadura[data-salida='1'] .salpicadura__contenido {
+        animation: salpicadura-se-vas 380ms ease-in forwards;
+      }
+
+      @keyframes salpicadura-se-vas {
+        to {
+          opacity: 0;
+          transform: translateY(34px);
+        }
+      }
+
+      #salpicadura[data-salida='1'] .salpicadura__goteo {
+        animation: salpicadura-goteo-salida 750ms cubic-bezier(0.65, 0, 0.35, 1) forwards;
+        animation-delay: calc(var(--i) * 60ms);
+        opacity: 1;
+      }
+
+      @keyframes salpicadura-goteo-salida {
+        from {
+          transform: scaleY(1);
+          transform-origin: top;
+        }
+        to {
+          transform: scaleY(2.6);
+          transform-origin: top;
+        }
+      }
+
+      /* --- Accesibilidad: sin animaciones para quien las pida --------------- */
+      @media (prefers-reduced-motion: reduce) {
+        .salpicadura__pintura,
+        .salpicadura__contenido,
+        .salpicadura__goteo,
+        .salpicadura__barra i,
+        .salpicadura__estado::before {
+          animation-duration: 1ms !important;
+          animation-iteration-count: 1 !important;
+        }
+      }
+    </style>
   </head>
+
   <body>
+    <!-- La pintura va ANTES de #app para que sea lo primero que se pinta. -->
+    <div
+      id="salpicadura"
+      data-splash
+      role="status"
+      aria-live="polite"
+      aria-label="Cargando la aplicación del laboratorio"
+    >
+      <div class="salpicadura__pintura" aria-hidden="true">
+        <!-- Goteos: --x horizontal, --w grosor, --dur duración, --del retardo,
+             --i orden para el escalonamiento de la salida. -->
+        <span class="salpicadura__goteo" style="--x: 8%;  --w: 7px;  --dur: 3.1s; --del: 0s;    --i: 0"></span>
+        <span class="salpicadura__goteo" style="--x: 24%; --w: 5px;  --dur: 3.8s; --del: 0.7s;  --i: 1"></span>
+        <span class="salpicadura__goteo" style="--x: 43%; --w: 9px;  --dur: 2.9s; --del: 1.3s;  --i: 2"></span>
+        <span class="salpicadura__goteo" style="--x: 61%; --w: 6px;  --dur: 4.2s; --del: 0.4s;  --i: 3"></span>
+        <span class="salpicadura__goteo" style="--x: 78%; --w: 8px;  --dur: 3.4s; --del: 1.7s;  --i: 4"></span>
+        <span class="salpicadura__goteo" style="--x: 92%; --w: 5px;  --dur: 3.6s; --del: 1.0s;  --i: 5"></span>
+      </div>
+
+      <div class="salpicadura__contenido">
+        <!-- LOGO SENA inlineado: sin petición de red adicional. Es el elemento
+             más grande de la pantalla — el logotipo oficial manda. Se limpió
+             el metadato de Inkscape y quedó solo la forma. -->
+        <div class="salpicadura__logo">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 74.999997 73.5" role="img" aria-label="Logotipo del SENA">
+            <path fill="#2e7d32" d="M 37.729312,0.76709211 A 7.9671225,7.9671225 0 0 0 29.773371,8.741545 7.9671225,7.9671225 0 0 0 37.744605,16.701107 7.9671225,7.9671225 0 0 0 45.707788,8.733898 V 8.718608 A 7.9671225,7.9671225 0 0 0 37.729312,0.76709211 Z M 11.446982,19.169553 c -1.400062,0.0084 -2.8234862,0.08599 -4.1584857,0.42261 -0.8795905,0.222694 -1.7315449,0.589234 -2.2841086,1.159562 -0.6939573,0.71469 -0.7830516,1.683375 -0.4447463,2.510708 0.3027378,0.728932 1.116412,1.275934 2.0228936,1.588612 1.9500175,0.668079 4.117455,0.809612 6.168096,1.230399 0.378207,0.09257 0.796556,0.194498 1.030766,0.452796 0.242885,0.306852 0.09871,0.729986 -0.299446,0.922901 -0.666204,0.338572 -1.517067,0.341289 -2.29256,0.329636 -0.708709,-0.02913 -1.4860247,-0.08878 -2.0498634,-0.44354 -0.4146382,-0.255061 -0.487253,-0.689278 -0.3944343,-1.062161 l -4.5714374,4.13e-4 c -0.012144,0.695917 0.1230528,1.422157 0.6331108,2.019674 0.4259168,0.510124 1.1138561,0.869443 1.8546552,1.08631 1.1823274,0.347635 2.4633397,0.45247 3.7246061,0.484191 1.711468,0.02913 3.456086,-0.02172 5.099895,-0.410133 0.979349,-0.238231 1.942311,-0.624278 2.569473,-1.250927 1.113798,-1.117998 0.851643,-2.888599 -0.629086,-3.758011 -0.737329,-0.429203 -1.620362,-0.695805 -2.52077,-0.867357 -1.316781,-0.273188 -2.657724,-0.472977 -3.991855,-0.693081 -0.468421,-0.09127 -0.9637641,-0.17183 -1.3575867,-0.393229 -0.4120347,-0.221399 -0.4451988,-0.742521 -0.025355,-0.970393 0.5430207,-0.306203 1.2665147,-0.304035 1.9162377,-0.304681 0.68528,0.01165 1.430476,0.05483 1.994315,0.375921 0.31575,0.17673 0.442485,0.473443 0.445955,0.758283 l 4.344837,-0.01004 c -0.01734,-0.550925 -0.118731,-1.123123 -0.521227,-1.598289 -0.466686,-0.585218 -1.287477,-0.954052 -2.13237,-1.169625 -1.325457,-0.335334 -2.741002,-0.404061 -4.131515,-0.410535 z m 9.425817,0.328831 -0.0019,10.38132 12.670256,4.12e-4 -0.0011,-2.263178 H 25.518157 V 25.60169 h 7.154592 v -2.212465 h -7.154592 l -0.0016,-1.652607 7.734167,-0.002 -0.0044,-2.236213 z m 20.874932,0.0036 c 0,0 -3.91491,0.0012 -5.871868,0.0012 l -8.25e-4,10.382125 4.448274,4.12e-4 -0.0028,-6.986351 6.093235,6.980716 6.104905,0.0056 -0.0016,-10.382527 -4.451897,7.97e-4 0.0052,6.936443 z m 18.702713,0.01731 c 0,0 -4.795135,6.925757 -7.204899,10.383332 l 4.669239,4.12e-4 1.120118,-1.873169 h 7.21456 l 1.045256,1.873974 5.186434,-7.96e-4 -6.872848,-10.382125 z m 2.333214,2.478105 2.214074,3.76083 -4.576669,0.0065 z m -62.26819489,10.81881 0.0402459,5.651707 21.11883799,-0.07527 c 1.07706,0.231841 1.7024,0.932964 1.482355,2.526807 l -12.989427,22.73807 4.231335,3.955631 20.118662,-34.796918 z m 40.29930289,0.0483 19.784196,34.649208 4.372205,-3.930275 -13.14036,-22.678472 c -0.22011,-1.598763 0.405444,-2.307963 1.482759,-2.540491 l 21.123264,0.07527 -0.0056,-5.557928 z m -3.337814,5.733814 -18.552992,31.845491 4.928038,2.401635 12.380065,-20.924035 c 0.426522,-0.348923 0.858497,-0.534847 1.290772,-0.552212 0.455325,-0.01744 0.916655,0.151004 1.377709,0.511558 l 12.351487,20.988033 5.083398,-2.65158 z" />
+          </svg>
+        </div>
+
+        <p class="salpicadura__marca">Labficat</p>
+
+        <p class="salpicadura__titulo">
+          Sistema de Gestión para el Servicio de Análisis de Laboratorio
+        </p>
+
+        <div class="salpicadura__regla" aria-hidden="true"></div>
+
+        <p class="salpicadura__eslogan">Calidad y trazabilidad en cada análisis</p>
+
+        <!-- El controlador escribe aquí el estado real de la carga. -->
+        <p class="salpicadura__estado" data-estado>Preparando el sistema…</p>
+
+        <!-- Solo se muestra después de iniciar sesión: lo activa
+             /src/splash/controlador.js con data-visible="1". -->
+        <p class="salpicadura__sesion" data-sesion aria-hidden="true">
+          <b data-sesion-nombre></b><span data-sesion-rol></span>
+        </p>
+
+        <div class="salpicadura__barra" aria-hidden="true"><i></i></div>
+      </div>
+    </div>
+
     <div id="app"></div>
+
     <script type="module" src="/src/main.js"></script>
+
+    <!-- RESPALDO (JS clásico, sin dependencias).
+         Bloquea el scroll de inmediato y, si el bundle de módulos nunca llegara
+         (red caída), retira la pintura a los 9 s para no dejar la aplicación
+         bloqueada. Es idempotente: si /src/splash/controlador.js ya la retiró,
+         no encuentra el nodo y no hace nada. -->
+    <script>
+      // Bandera que controla este respaldo: la apaga
+      // /src/splash/controlador.js en cuanto retira la pintura inicial, para
+      // que a los 9 s no se lleve por delante una pintura posterior (la que
+      // aparece tras iniciar sesión). Si el bundle nunca llegara, la bandera
+      // sigue encendida y este respaldo sigue siendo el que salva la pantalla.
+      window.__salpicaduraRespaldo = true
+
+      document.documentElement.style.overflow = 'hidden'
+      document.body.style.overflow = 'hidden'
+
+      setTimeout(function () {
+        if (window.__salpicaduraRespaldo === false) return
+
+        var nodo = document.getElementById('salpicadura')
+        if (nodo) nodo.setAttribute('data-salida', '1')
+
+        setTimeout(function () {
+          if (window.__salpicaduraRespaldo === false) return
+
+          var n = document.getElementById('salpicadura')
+          if (n && n.parentNode) n.parentNode.removeChild(n)
+          document.documentElement.style.overflow = ''
+          document.body.style.overflow = ''
+        }, 800)
+      }, 9000)
+    </script>
   </body>
 </html>

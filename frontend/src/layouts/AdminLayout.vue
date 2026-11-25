@@ -15,6 +15,7 @@ import { useGeneralStore } from '@/store/General'
 import { useAuthStore } from '@/store/Auth'
 import { useNotificar } from '@/composables/useNotificar'
 import { formatDateTime } from '@/utils/formatDate'
+import { mostrarSalpicadura } from '@/splash/controlador'
 import logoSena from '@/assets/logo-sena.svg'
 
 const general = useGeneralStore()
@@ -52,7 +53,19 @@ watch(() => route.name, cargarPendientes)
 
 const salir = () => {
   auth.cerrarSesion()
-  notificarInfo('Sesión cerrada')
+
+  // --- PANTALLA DE CARGA — 3.er USO ----------------------------------------
+  // Sale aquí para cubrir la transición al login: se queda en pantalla hasta
+  // que la ruta esté resuelta.
+  // Sin `apiUrl` NO se llama a /health (no aporta nada al salir), así que
+  // dura el mínimo de 1 s. El aviso se emite al FINAL: mientras la pintura
+  // cubre la pantalla no se llegaría a ver.
+  mostrarSalpicadura({
+    router,
+    contexto: { estado: 'Cerrando la sesión…' },
+    alTerminar: () => notificarInfo('Sesión cerrada'),
+  })
+
   router.push({ name: 'login' })
 }
 

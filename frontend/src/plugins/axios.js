@@ -15,6 +15,7 @@ import axios from 'axios'
 
 import { router } from '@/router'
 import { useAuthStore } from '@/store/Auth'
+import { mostrarSalpicadura } from '@/splash/controlador'
 
 const api = axios.create({
   baseURL: apiBaseUrl(),
@@ -68,7 +69,16 @@ api.interceptors.response.use(
 function cerrarSesionYSalir() {
   const auth = useAuthStore()
   auth.cerrarSesion()
-  if (router.currentRoute.value.name !== 'login') router.push({ name: 'login' })
+  if (router.currentRoute.value.name === 'login') return
+
+  // --- PANTALLA DE CARGA — 3.er USO (cierre forzado) ------------------------
+  // Token vencido o ausente: se cubre la transición al login igual que con el
+  // botón. Sin `apiUrl` no hay llamada a /health, así que dura el mínimo de 1 s.
+  mostrarSalpicadura({
+    router,
+    contexto: { estado: 'Cerrando la sesión…' },
+  })
+  router.push({ name: 'login' })
 }
 
 function apiBaseUrl() {
