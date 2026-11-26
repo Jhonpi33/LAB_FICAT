@@ -657,7 +657,7 @@ const prioridadColor = (p) => ({ alta: 'texto-alta', media: 'texto-media', baja:
         <div class="row q-col-gutter-md">
           <div class="col-12 col-lg-5">
             <q-card flat class="tarjeta-luz full-height animar" style="animation-delay: 580ms">
-              <q-card-section>
+              <q-card-section class="muestras-card">
                 <div class="titulo-seccion q-mb-md">Muestras por estado</div>
                 <div v-if="distribucionMuestras.length" class="barras">
                   <div class="barra" v-for="(m, idx) in distribucionMuestras" :key="m.value">
@@ -668,7 +668,7 @@ const prioridadColor = (p) => ({ alta: 'texto-alta', media: 'texto-media', baja:
                     <div class="barra__valor">{{ m.cantidad }}</div>
                   </div>
                 </div>
-                <div v-else class="text-center q-py-lg empty-title">Aún no hay muestras registradas</div>
+                <div v-else class="text-center empty-title muestras-vacio">Aún no hay muestras registradas</div>
               </q-card-section>
             </q-card>
           </div>
@@ -1003,10 +1003,26 @@ const prioridadColor = (p) => ({ alta: 'texto-alta', media: 'texto-media', baja:
 }
 
 // --- Barras de muestras ----------------------------------------------------------------
-.barras {
+.muestras-card {
   display: flex;
   flex-direction: column;
+  height: 100%;
+}
+
+.barras {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-evenly;
   gap: 10px;
+}
+
+.muestras-vacio {
+  flex: 1 1 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .barra {
@@ -1014,6 +1030,7 @@ const prioridadColor = (p) => ({ alta: 'texto-alta', media: 'texto-media', baja:
   grid-template-columns: 140px 1fr 26px;
   align-items: center;
   gap: 10px;
+  min-height: 30px;
   font-size: 13px;
 }
 
