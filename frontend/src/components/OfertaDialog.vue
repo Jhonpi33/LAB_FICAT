@@ -111,6 +111,8 @@ const obligatorio = v => !!String(v ?? '').trim() || 'Campo obligatorio'
         <div class="oferta__grid">
           <q-select v-model="cliente.tipo_documento" outlined dense label="Tipo de documento" :options="['CC','NIT','CE','TI']" :readonly="!!clienteId" />
           <q-select v-model="cliente.tipo_cliente" outlined dense label="Tipo de cliente" :options="[{label:'Interno SENA',value:'interno'},{label:'Externo',value:'externo'}]" emit-value map-options :readonly="!!clienteId" />
+          <q-select v-if="cliente.tipo_cliente === 'interno'" v-model="cliente.rol" outlined dense label="Rol SENA" :options="['instructor','aprendiz','administrativo']" :readonly="!!clienteId" :rules="[obligatorio]" />
+          <q-input v-if="cliente.tipo_cliente === 'interno'" v-model="cliente.ficha" outlined dense label="Ficha SENA" :readonly="!!clienteId" :rules="[obligatorio]" />
           <q-input v-for="[campo,label] in clienteCampos" :key="campo" v-model="cliente[campo]" outlined dense :label="label" :type="campo === 'email' ? 'email' : 'text'" :readonly="!!clienteId" :rules="[obligatorio]" />
           <q-input v-for="[campo,label] in campos" :key="campo" v-model="datos[campo]" outlined dense :label="label" :type="campo === 'vigencia' ? 'date' : 'text'" :maxlength="160" :rules="campo === 'observaciones' ? [] : [obligatorio]" />
         </div>

@@ -57,8 +57,10 @@ export async function crear(data) {
       if (data.cliente_id) cliente = await Cliente.findOne({ _id: data.cliente_id, eliminado: false }).session(session);
       else {
         const entrada = data.cliente || {};
-        const datos = Object.fromEntries(['nombre','numero_documento','tipo_documento','email','telefono','direccion','tipo_cliente'].map(c => [c, texto(entrada[c] ?? '', c)]));
+        const datos = Object.fromEntries(['nombre','numero_documento','tipo_documento','email','telefono','direccion','tipo_cliente','rol','ficha'].map(c => [c, texto(entrada[c] ?? '', c)]));
         datos.email = datos.email.toLowerCase();
+        if (datos.tipo_cliente === 'interno' && (!['instructor','aprendiz','administrativo'].includes(datos.rol) || !datos.ficha))
+          throw httpError(400, 'Para un cliente interno indica el rol SENA y la ficha.');
         if (await Cliente.exists({ $or: [{ numero_documento: datos.numero_documento }, { email: datos.email }] }).session(session))
           throw httpError(409, 'El cliente ya existe. Búscalo por correo o documento.');
         [cliente] = await Cliente.create([datos], { session });
