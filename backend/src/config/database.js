@@ -26,6 +26,20 @@ mongoose.connection.on('connected', () => console.log(`MongoDB Atlas conectado a
 mongoose.connection.on('error', (err) => console.error('MongoDB error:', describirError(err)));
 mongoose.connection.on('disconnected', () => console.warn('MongoDB: conexion cerrada'));
 
+async function eliminarIndicesObsoletos() {
+  const coleccion = mongoose.connection.collection('clientes');
+  const indices = await coleccion.indexes();
+  const obsoleto = indices.find(indice =>
+    indice.name === 'tipo_identificacion_1_numero_identificacion_1'
+    && indice.key?.tipo_identificacion === 1
+    && indice.key?.numero_identificacion === 1
+  );
+  if (obsoleto) {
+    await coleccion.dropIndex(obsoleto.name);
+    console.log('MongoDB: indice obsoleto de clientes eliminado');
+  }
+}
+
 function programarReintento() {
   if (retryTimer) return;
   const espera = retryDelayMs;
@@ -49,6 +63,7 @@ async function connectDB() {
       maxPoolSize: 5,
       minPoolSize: 0
     });
+    await eliminarIndicesObsoletos();
     retryDelayMs = 5_000;
     if (retryTimer) clearTimeout(retryTimer);
     retryTimer = undefined;

@@ -41,7 +41,12 @@ async function crear(data) {
       ficha: data.tipo_cliente === 'interno' ? String(data.ficha || '').trim() : ''
     });
   } catch (error) {
-    if (error.code === 11000) throw httpError(409, 'Ya existe un cliente con ese número de documento.');
+    if (error.code === 11000) {
+      const campo = Object.keys(error.keyPattern || {})[0];
+      throw httpError(409, campo === 'email'
+        ? 'Ya existe un cliente con ese correo electrónico.'
+        : 'Ya existe un cliente con ese número de documento.');
+    }
     throw error;
   }
 }
@@ -69,7 +74,12 @@ async function editar(id, data) {
   try {
     await cliente.save();
   } catch (error) {
-    if (error.code === 11000) throw httpError(409, 'Ya existe un cliente con ese número de documento.');
+    if (error.code === 11000) {
+      const campo = Object.keys(error.keyPattern || {})[0];
+      throw httpError(409, campo === 'email'
+        ? 'Ya existe un cliente con ese correo electrónico.'
+        : 'Ya existe un cliente con ese número de documento.');
+    }
     throw error;
   }
   return cliente;
