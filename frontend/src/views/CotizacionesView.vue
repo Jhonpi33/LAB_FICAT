@@ -214,10 +214,10 @@ const guardarEstado = async () => {
         </q-card-section>
 
         <q-form ref="formularioRef" greedy @submit="guardar">
-          <q-card-section class="q-gutter-md">
+          <q-card-section class="column no-wrap q-px-lg q-pt-lg q-pb-md" style="gap: 16px">
             <q-select
               v-model="formulario.solicitud_id"
-              outlined dense :options="opcionesSolicitud" emit-value map-options label="Solicitud *"
+              outlined dense hide-bottom-space :options="opcionesSolicitud" emit-value map-options label="Solicitud *"
               :rules="[seleccionRequerida('la solicitud')]" lazy-rules
             >
               <template #prepend><q-icon name="assignment" /></template>
@@ -233,14 +233,14 @@ const guardarEstado = async () => {
                   <div class="col-12 col-sm-6">
                     <q-select
                       v-model="item.parametro_id"
-                      outlined dense :options="opcionesParametro" emit-value map-options label="Parámetro *"
+                      outlined dense hide-bottom-space :options="opcionesParametro" emit-value map-options label="Parámetro *"
                       :rules="[seleccionRequerida('el parámetro')]" lazy-rules
                     />
                   </div>
                   <div class="col-6 col-sm-3">
                     <q-input
                       v-model.number="item.cantidad"
-                      outlined dense type="number" label="Cantidad *" min="1"
+                      outlined dense hide-bottom-space type="number" label="Cantidad *" min="1"
                       :rules="[(v) => Number(v) >= 1 || 'Mínimo 1']" lazy-rules
                     />
                   </div>
@@ -286,8 +286,8 @@ const guardarEstado = async () => {
           <q-btn v-close-popup flat round dense icon="close" color="white" />
         </q-card-section>
 
-        <q-card-section class="q-gutter-md">
-          <q-select v-model="estadoNuevo" outlined dense :options="ESTADOS" emit-value map-options label="Estado *" />
+        <q-card-section class="column no-wrap q-px-lg q-pt-lg q-pb-md" style="gap: 16px">
+          <q-select v-model="estadoNuevo" outlined dense hide-bottom-space :options="ESTADOS" emit-value map-options label="Estado *" />
           <q-banner v-if="estadoNuevo === 'aceptada'" dense class="bg-green-1 text-green-10 rounded-borders">
             <template #avatar><q-icon name="info" /></template>
             Al aceptar, la solicitud pasa a estado <strong>aceptada</strong> y podrá registrarse el pago.

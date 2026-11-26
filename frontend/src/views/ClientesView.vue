@@ -3,7 +3,7 @@
  * /views/ClientesView.vue
  * CRUD de clientes (internos y externos) del laboratorio.
  */
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 
 import EncabezadoPagina from '@/components/Encabezados/EncabezadoPagina.vue'
 import TablaDatos from '@/components/Tables/TablaDatos.vue'
@@ -27,6 +27,12 @@ const TIPO_CLIENTE = [
   { label: 'Externo', value: 'externo' },
 ]
 const TIPO_CLIENTE_LABEL = { interno: 'Interno SENA', externo: 'Externo' }
+const ROLES = [
+  { label: 'Instructor', value: 'instructor' },
+  { label: 'Aprendiz', value: 'aprendiz' },
+  { label: 'Administrativo', value: 'administrativo' },
+]
+const ROL_LABEL = { instructor: 'Instructor', aprendiz: 'Aprendiz', administrativo: 'Administrativo' }
 
 const columnas = [
   { name: 'nombre', label: 'Nombre', field: 'nombre', align: 'left', sortable: true },
@@ -71,10 +77,23 @@ const formularioVacio = () => ({
   telefono: '',
   direccion: '',
   tipo_cliente: 'externo',
+  rol: '',
+  ficha: '',
 })
 const formulario = ref(formularioVacio())
 
 const esEdicion = computed(() => clienteEditando.value !== null)
+
+// Al pasar a "Externo" se limpian rol y ficha (no aplican).
+watch(
+  () => formulario.value.tipo_cliente,
+  (tipo) => {
+    if (tipo !== 'interno') {
+      formulario.value.rol = ''
+      formulario.value.ficha = ''
+    }
+  }
+)
 
 const abrirCreacion = () => {
   clienteEditando.value = null
@@ -92,6 +111,8 @@ const abrirEdicion = (cliente) => {
     telefono: cliente.telefono || '',
     direccion: cliente.direccion || '',
     tipo_cliente: cliente.tipo_cliente,
+    rol: cliente.rol || '',
+    ficha: cliente.ficha || '',
   }
   dialogo.value = true
 }
@@ -107,6 +128,8 @@ const guardar = async () => {
       telefono: formulario.value.telefono.trim(),
       direccion: formulario.value.direccion.trim(),
       tipo_cliente: formulario.value.tipo_cliente,
+      rol: formulario.value.tipo_cliente === 'interno' ? formulario.value.rol : '',
+      ficha: formulario.value.tipo_cliente === 'interno' ? formulario.value.ficha.trim() : '',
     }
 
     const respuesta = esEdicion.value
@@ -187,25 +210,25 @@ const guardar = async () => {
         </q-card-section>
 
         <q-form ref="formularioRef" greedy @submit="guardar">
-          <q-card-section class="q-gutter-md">
+          <q-card-section class="campos-dialogo">
             <q-input
               v-model="formulario.nombre"
-              outlined dense label="Nombre completo / razón social *"
+              outlined dense label="Nombre completo *"
               :rules="[requerido('El nombre'), minimo(3, 'El nombre'), maximo(120, 'El nombre')]"
               lazy-rules
             >
               <template #prepend><q-icon name="person" /></template>
             </q-input>
 
-            <div class="row q-col-gutter-md">
-              <div class="col-12 col-sm-5">
+            <div class="fila-dialogo">
+              <div class="campo-dialogo">
                 <q-select
                   v-model="formulario.tipo_documento"
                   outlined dense :options="TIPO_DOC" emit-value map-options label="Tipo de documento *"
                   :rules="[seleccionRequerida('el tipo de documento')]" lazy-rules
                 />
               </div>
-              <div class="col-12 col-sm-7">
+              <div class="campo-dialogo">
                 <q-input
                   v-model="formulario.numero_documento"
                   outlined dense label="Número de documento *" input-class="mono"
@@ -222,11 +245,11 @@ const guardar = async () => {
               <template #prepend><q-icon name="mail" /></template>
             </q-input>
 
-            <q-input v-model="formulario.telefono" outlined dense label="Teléfono">
+            <q-input v-model="formulario.telefono" outlined dense bottom-slots label="Teléfono">
               <template #prepend><q-icon name="phone" /></template>
             </q-input>
 
-            <q-input v-model="formulario.direccion" outlined dense label="Dirección">
+            <q-input v-model="formulario.direccion" outlined dense bottom-slots label="Dirección">
               <template #prepend><q-icon name="place" /></template>
             </q-input>
 
@@ -237,6 +260,29 @@ const guardar = async () => {
             >
               <template #prepend><q-icon name="badge" /></template>
             </q-select>
+
+            <!-- Solo para clientes internos (SENA): rol y ficha -->
+            <div v-if="formulario.tipo_cliente === 'interno'" class="fila-dialogo">
+              <div class="campo-dialogo">
+                <q-select
+                  v-model="formulario.rol"
+                  outlined dense :options="ROLES" emit-value map-options label="Rol *"
+                  :rules="[seleccionRequerida('el rol')]" lazy-rules
+                >
+                  <template #prepend><q-icon name="assignment_ind" /></template>
+                </q-select>
+              </div>
+              <div class="campo-dialogo">
+                <q-input
+                  v-model="formulario.ficha"
+                  outlined dense bottom-slots label="Ficha *" input-class="mono"
+                  :rules="[(v) => String(v || '').trim() !== '' || 'La ficha es obligatoria', maximo(30, 'La ficha')]"
+                  lazy-rules
+                >
+                  <template #prepend><q-icon name="tag" /></template>
+                </q-input>
+              </div>
+            </div>
           </q-card-section>
 
           <q-card-actions align="right" class="q-px-md q-pb-md">
@@ -252,3 +298,26 @@ const guardar = async () => {
     </q-dialog>
   </q-page>
 </template>
+
+<style scoped>
+/* Espaciado uniforme entre todos los campos del diálogo (sin gutter negativo).
+   Cada campo de Quasar reserva 20px de zona de mensajes (bottom) debajo del
+   cuadro; con gap 0 la distancia visible entre cuadros queda igual en todos. */
+.campos-dialogo {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+/* Fila de dos campos: misma altura y misma distancia entre ellos. */
+.fila-dialogo {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+}
+
+.campo-dialogo {
+  flex: 1 1 200px;
+  min-width: 0;
+}
+</style>

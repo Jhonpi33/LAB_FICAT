@@ -74,4 +74,12 @@ const slotsReenviados = computed(() =>
 .tabla-datos {
   border-radius: 8px;
 }
+
+/* Centra encabezados y celdas de todas las tablas que usan este componente.
+   Se usa mayor especificidad para ganar a las clases text-left/text-right
+   que Quasar y algunas vistas aplican a las celdas. */
+.tabla-datos :deep(thead th),
+.tabla-datos :deep(tbody td) {
+  text-align: center;
+}
 </style>

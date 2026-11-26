@@ -247,10 +247,10 @@ const abrirRespuestas = (incidencia) => {
         </q-card-section>
 
         <q-form ref="formularioRef" greedy @submit="guardar">
-          <q-card-section class="q-gutter-md">
+          <q-card-section class="form-dialog q-px-lg q-pt-lg q-pb-md">
             <q-select
               v-model="formulario.muestra_id"
-              outlined dense :options="opcionesMuestra" emit-value map-options label="Muestra *"
+              outlined hide-bottom-space :options="opcionesMuestra" emit-value map-options label="Muestra *"
               :rules="[seleccionRequerida('la muestra')]" lazy-rules
             >
               <template #prepend><q-icon name="science" /></template>
@@ -258,41 +258,41 @@ const abrirRespuestas = (incidencia) => {
 
             <q-select
               v-model="formulario.tipo"
-              outlined dense :options="TIPOS" emit-value map-options label="Tipo *"
+              outlined hide-bottom-space :options="TIPOS" emit-value map-options label="Tipo *"
               :rules="[seleccionRequerida('el tipo')]" lazy-rules
             />
 
             <q-input
               v-model="formulario.titulo"
-              outlined dense label="Título *"
+              outlined hide-bottom-space label="Título *"
               :rules="[requerido('El título')]" lazy-rules
             />
 
             <q-input
               v-model="formulario.descripcion"
-              type="textarea" outlined label="Descripción *" rows="3"
+              type="textarea" outlined hide-bottom-space label="Descripción *" rows="3"
               :rules="[requerido('La descripción')]" lazy-rules
             />
 
             <q-input
               v-if="formulario.tipo === 'demora'"
               v-model="formulario.nueva_fecha_estimada"
-              outlined dense type="date" label="Nueva fecha estimada"
+              outlined hide-bottom-space type="date" label="Nueva fecha estimada"
               hint="Se informará al cliente en el seguimiento público"
             />
 
             <q-input
               v-model="formulario.observaciones_internas"
-              type="textarea" outlined label="Observaciones internas" rows="2"
+              type="textarea" outlined hide-bottom-space label="Observaciones internas" rows="2"
               hint="Nunca son visibles para el cliente"
             />
 
-            <div class="row q-col-gutter-md">
-              <div class="col-6">
-                <q-toggle v-model="formulario.visible_cliente" label="Visible al cliente" color="primary" left-label />
+            <div class="form-dialog__fila">
+              <div>
+                <q-toggle v-model="formulario.visible_cliente" label="Visible al cliente" color="primary" left-label class="form-dialog__toggle" />
               </div>
-              <div class="col-6">
-                <q-toggle v-model="formulario.requiere_respuesta" label="Requiere respuesta" color="primary" left-label />
+              <div>
+                <q-toggle v-model="formulario.requiere_respuesta" label="Requiere respuesta" color="primary" left-label class="form-dialog__toggle" />
               </div>
             </div>
 
@@ -371,3 +371,35 @@ const abrirRespuestas = (incidencia) => {
     </q-dialog>
   </q-page>
 </template>
+
+<style scoped lang="scss">
+// Formulario del diálogo: columna con separación uniforme entre campos.
+.form-dialog {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+
+  > * {
+    width: 100%;
+    margin: 0 !important;
+  }
+
+  // Dos interruptores lado a lado, cada uno en su mitad
+  &__fila {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    align-items: center;
+
+    @media (max-width: 600px) {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  // Interruptor pegado a su texto (no al borde de la columna)
+  &__toggle {
+    justify-content: flex-start;
+    padding: 0 4px;
+  }
+}
+</style>
