@@ -11,6 +11,7 @@ import { computed, onMounted, ref } from 'vue'
 
 import EncabezadoPagina from '@/components/Encabezados/EncabezadoPagina.vue'
 import RecepcionDialog from '@/components/RecepcionDialog.vue'
+import OfertaDialog from '@/components/OfertaDialog.vue'
 import TablaDatos from '@/components/Tables/TablaDatos.vue'
 
 import { get, post, put, patch } from '@/services/api.service'
@@ -23,6 +24,9 @@ const general = useGeneralStore()
 const { notificarOk, notificarError } = useNotificar()
 
 const recepcionAbierta = ref(false)
+const ofertaAbierta = ref(false)
+const ofertaSolicitud = ref(null)
+function abrirOferta(id = null) { ofertaSolicitud.value = id; ofertaAbierta.value = true }
 const recepcionSolicitud = ref(null)
 function abrirRecepcion(id) {
   recepcionSolicitud.value = id
@@ -201,7 +205,8 @@ const estadoLabel = (e) => ESTADOS.find((x) => x.value === e)?.label || e
         icono="assignment"
       >
         <template #acciones>
-          <q-btn unelevated no-caps color="primary" icon="add" label="Nueva solicitud" @click="abrirCreacion" />
+          <q-btn unelevated no-caps color="primary" icon="add" label="Solicitud y cotización" @click="abrirOferta()" />
+          <q-btn flat no-caps color="primary" label="Solicitud simple" @click="abrirCreacion" />
         </template>
       </EncabezadoPagina>
 
@@ -289,6 +294,7 @@ const estadoLabel = (e) => ESTADOS.find((x) => x.value === e)?.label || e
 
         <template #body-cell-acciones="celda">
           <q-td :props="celda" class="text-right">
+            <q-btn flat dense no-caps color="primary" icon="description" label="Oferta PDF" @click="abrirOferta(celda.row._id)" />
             <q-btn flat dense no-caps color="primary" icon="description" label="Recepción" @click="abrirRecepcion(celda.row._id)" />
             <q-btn flat dense round size="sm" icon="swap_horiz" color="info" class="action-secondary" @click="abrirCambioEstado(celda.row)">
               <q-tooltip>Cambiar estado</q-tooltip>
@@ -302,6 +308,7 @@ const estadoLabel = (e) => ESTADOS.find((x) => x.value === e)?.label || e
     </div>
 
     <RecepcionDialog v-model="recepcionAbierta" :solicitud="recepcionSolicitud" />
+    <OfertaDialog v-model="ofertaAbierta" :solicitud="ofertaSolicitud" @guardado="cargar" />
 
     <!-- Formulario crear/editar -->
     <q-dialog v-model="dialogo" persistent @show="formularioRef?.resetValidation()">

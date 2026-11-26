@@ -2,6 +2,8 @@ import mongoose from 'mongoose';
 import Pago from '../models/Pago.js';
 import Cotizacion from '../models/Cotizacion.js';
 import Solicitud from '../models/Solicitud.js';
+import Oferta from '../models/Oferta.js';
+import CorreoOferta from '../models/CorreoOferta.js';
 import { generarReferenciaPago } from './secuencias.service.js';
 import { httpError } from '../utils/responses.js';
 
@@ -87,11 +89,16 @@ async function cambiarEstado(id, estado) {
   pago.estado = estado;
   pago.fecha_confirmacion = estado === 'confirmado' ? new Date() : null;
 
-  await pago.save();
-
-  if (estado === 'confirmado') {
-    await Solicitud.updateOne({ _id: pago.solicitud_id }, { $set: { estado: 'pagada' } });
-  }
+  await mongoose.connection.transaction(async session => {
+    await pago.save({ session });
+    if (estado === 'confirmado') {
+      await Solicitud.updateOne({ _id: pago.solicitud_id }, { $set: { estado: 'pagada' } }, { session });
+      if (await Oferta.exists({ cotizacion: pago.cotizacion_id, firmada: { $ne: null } }).session(session)) {
+        await CorreoOferta.updateOne({ solicitud: pago.solicitud_id, evento: 'recibo' },
+          { $setOnInsert: { estado: 'pendiente', proximoIntento: new Date() } }, { upsert: true, session });
+      }
+    }
+  });
 
   return conRelaciones(pago);
 }

@@ -5,7 +5,8 @@ import { get, post } from '@/services/api.service'
 import { obtenerPdf } from '@/services/pdf.service'
 import logoSena from '@/assets/logo-sena.svg'
 
-const ruta = '/firmas/' + useRoute().params.token
+const esOferta = useRoute().meta.oferta === true
+const ruta = (esOferta ? '/ofertas/firma/' : '/firmas/') + useRoute().params.token
 const datos = ref(null)
 const archivo = ref(null)
 const acepto = ref(false)
@@ -63,7 +64,7 @@ async function firmar() {
         <img :src="logoSena" alt="SENA" width="44" height="44">
         <div>
           <div class="text-caption text-weight-bold text-green-9">LABFICAT</div>
-          <h1 class="titulo-vista">Validar recepción de muestras</h1>
+          <h1 class="titulo-vista">{{ esOferta ? 'Aceptar oferta de servicios' : 'Validar recepción de muestras' }}</h1>
         </div>
       </header>
       <q-linear-progress v-if="cargando" indeterminate color="primary" />
@@ -74,18 +75,18 @@ async function firmar() {
       <div v-if="datos && !firmado" class="firma__cuerpo">
         <section class="firma__documento">
           <div class="row items-center justify-between q-pa-sm">
-            <div><strong>{{ datos.cliente }}</strong><div class="text-caption">CAT–ST–MI–F–002</div></div>
+            <div><strong>{{ datos.cliente }}</strong><div class="text-caption">{{ esOferta ? datos.numero + ' · CAT–ST–OC–F–002' : 'CAT–ST–MI–F–002' }}</div></div>
             <q-btn flat no-caps icon="open_in_new" color="primary" :href="pdf" target="_blank" rel="noopener" label="Abrir PDF" />
           </div>
-          <iframe :src="pdf" title="Formato de recepción de muestras diligenciado"></iframe>
+          <iframe :src="pdf" title="Documento para revisar y firmar"></iframe>
         </section>
         <q-form class="firma__formulario" @submit="firmar">
-          <h2 class="text-h6 q-mt-none">Firma de quien entrega</h2>
+          <h2 class="text-h6 q-mt-none">{{ esOferta ? 'Firma de aceptación del cliente' : 'Firma de quien entrega' }}</h2>
           <q-file outlined v-model="archivo" accept="image/png,image/jpeg" label="Imagen de la firma"
             hint="PNG o JPG, máximo 1 MB" :rules="[v => !!v && v.size <= 1000000 || 'Selecciona una imagen de hasta 1 MB']">
             <template #prepend><q-icon name="draw" /></template>
           </q-file>
-          <q-checkbox class="q-my-md" v-model="acepto" label="Revisé el PDF y autorizo incorporar mi firma al formato de recepción." />
+          <q-checkbox class="q-my-md" v-model="acepto" :label="esOferta ? 'Revisé la oferta, acepto sus condiciones y autorizo incorporar mi firma.' : 'Revisé el PDF y autorizo incorporar mi firma al formato de recepción.'" />
           <q-btn unelevated no-caps type="submit" color="primary" class="full-width"
             label="Firmar y recibir copia" :loading="ocupado" :disable="!acepto" />
         </q-form>
