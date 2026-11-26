@@ -162,12 +162,15 @@ const guardando = ref(false)
 const cotizacionSeleccionada = ref(null)
 const formularioRef = ref(null) // q-form: valida antes de registrar
 
-const abrirCreacion = () => {
+const abrirCreacion = async () => {
   cotizacionSeleccionada.value = null
   dialogo.value = true
+  await cargar()
 }
 
 const guardar = async () => {
+  if (!cotizacionSeleccionada.value) return
+
   guardando.value = true
   try {
     const respuesta = await post('/pagos', { cotizacion_id: cotizacionSeleccionada.value })
@@ -407,13 +410,25 @@ const enviarEstado = async (pago, estado) => {
 
             <q-select
               v-model="cotizacionSeleccionada"
-              outlined dense :options="opcionesCotizacion" emit-value map-options
+              outlined dense hide-bottom-space :options="opcionesCotizacion" emit-value map-options
               label="Cotización aceptada *"
               :rules="[seleccionRequerida('la cotización')]" lazy-rules
+              :loading="cargando"
+              :disable="cargando || !opcionesCotizacion.length"
+              @update:model-value="formularioRef?.resetValidation()"
               class="dlg-pago__campo"
             >
               <template #prepend><q-icon name="request_quote" /></template>
             </q-select>
+
+            <q-banner
+              v-if="!cargando && !opcionesCotizacion.length && !error"
+              dense
+              class="bg-orange-1 text-orange-10 rounded-borders"
+            >
+              <template #avatar><q-icon name="info_outline" /></template>
+              No hay cotizaciones aceptadas disponibles para registrar un pago.
+            </q-banner>
 
             <div class="dlg-pago__nota">
               <q-icon name="info" size="18px" />
@@ -1036,7 +1051,6 @@ const enviarEstado = async (pago, estado) => {
   display: flex;
   align-items: center;
   gap: 7px;
-  margin-bottom: 10px;
   color: #2e7d32;
   font-size: 11.5px;
   font-weight: 800;
@@ -1051,7 +1065,12 @@ const enviarEstado = async (pago, estado) => {
 }
 
 .dlg-pago__campo {
-  margin-bottom: 12px;
+  margin-bottom: 0;
+}
+
+.dlg-pago__seccion {
+  display: grid;
+  gap: 12px;
 }
 
 // Nota informativa (reemplaza el banner azul) en clave verde.

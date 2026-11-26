@@ -38,7 +38,8 @@ async function crear(data) {
       direccion: data.direccion || '',
       tipo_cliente: data.tipo_cliente,
       rol: data.tipo_cliente === 'interno' ? data.rol || '' : '',
-      ficha: data.tipo_cliente === 'interno' ? String(data.ficha || '').trim() : ''
+      ficha: data.tipo_cliente === 'interno' && data.rol === 'aprendiz' ? String(data.ficha || '').trim() : '',
+      programa: data.tipo_cliente === 'interno' && data.rol === 'instructor' ? String(data.programa || '').trim() : ''
     });
   } catch (error) {
     if (error.code === 11000) throw httpError(409, 'Ya existe un cliente con ese número de documento.');
@@ -64,7 +65,8 @@ async function editar(id, data) {
   cliente.direccion = data.direccion || '';
   cliente.tipo_cliente = data.tipo_cliente;
   cliente.rol = data.tipo_cliente === 'interno' ? data.rol || '' : '';
-  cliente.ficha = data.tipo_cliente === 'interno' ? String(data.ficha || '').trim() : '';
+  cliente.ficha = data.tipo_cliente === 'interno' && data.rol === 'aprendiz' ? String(data.ficha || '').trim() : '';
+  cliente.programa = data.tipo_cliente === 'interno' && data.rol === 'instructor' ? String(data.programa || '').trim() : '';
 
   try {
     await cliente.save();

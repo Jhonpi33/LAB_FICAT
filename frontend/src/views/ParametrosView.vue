@@ -145,7 +145,7 @@ const cambiarActivo = async (parametro) => {
       <TablaDatos :filas="parametros" :columnas="columnas" :cargando="cargando" mensaje-vacio="Aún no hay parámetros registrados">
         <template #body-cell-activo="celda">
           <q-td :props="celda" class="text-center">
-            <q-badge :color="celda.row.activo ? 'positive' : 'grey-6'" :label="celda.row.activo ? 'Activo' : 'Inactivo'" />
+            <q-badge :color="celda.row.activo ? 'positive' : 'negative'" :label="celda.row.activo ? 'Activo' : 'Inactivo'" />
           </q-td>
         </template>
 
@@ -156,10 +156,10 @@ const cambiarActivo = async (parametro) => {
             </q-btn>
             <q-btn
               flat dense round size="sm" class="action-secondary"
-              :icon="celda.row.activo ? 'toggle_on' : 'toggle_off'"
-              :color="celda.row.activo ? 'negative' : 'positive'"
+              :color="celda.row.activo ? 'positive' : 'negative'"
               @click="cambiarActivo(celda.row)"
             >
+              <q-icon :name="celda.row.activo ? 'toggle_on' : 'toggle_off'" size="26px" />
               <q-tooltip>{{ celda.row.activo ? 'Desactivar' : 'Activar' }}</q-tooltip>
             </q-btn>
           </q-td>

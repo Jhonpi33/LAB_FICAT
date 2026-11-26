@@ -188,6 +188,9 @@ async function avanzarEtapa(id, { etapa }, usuario) {
   }
 
   if (etapa === 'resultados_validados') {
+    const total = await AnalisisMuestra.countDocuments({ muestra_id: muestra._id });
+    if (total === 0) throw httpError(400, 'La muestra debe tener al menos un análisis registrado antes de validar resultados');
+
     const pendientes = await AnalisisMuestra.countDocuments({ muestra_id: muestra._id, estado: { $ne: 'validado' } });
     if (pendientes > 0) throw httpError(400, 'Hay análisis sin validar: primero valida todos los resultados');
   }

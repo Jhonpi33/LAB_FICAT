@@ -45,7 +45,14 @@ const clienteSchema = new mongoose.Schema(
       type: String,
       default: '',
       maxlength: 30,
-      required: function () { return this.tipo_cliente === 'interno'; }
+      required: function () { return this.tipo_cliente === 'interno' && this.rol === 'aprendiz'; }
+    },
+    programa: {
+      type: String,
+      default: '',
+      trim: true,
+      maxlength: 120,
+      required: function () { return this.tipo_cliente === 'interno' && this.rol === 'instructor'; }
     },
     eliminado: { type: Boolean, default: false },
     eliminado_por: { type: String, default: null },

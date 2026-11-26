@@ -320,16 +320,6 @@ const iniciales = computed(() => {
         </q-item>
       </q-list>
 
-      <!-- Etiqueta de entorno académico (RNF-017) -->
-      <div class="absolute-bottom q-px-md entorno-abajo">
-        <div class="tarjeta-entorno">
-          <q-icon name="school" size="18px" />
-          <div>
-            <div class="tarjeta-entorno__titulo">Entorno académico de pruebas</div>
-            <div class="tarjeta-entorno__sub">LABFICAT · v1.0.0 · SENA</div>
-          </div>
-        </div>
-      </div>
     </q-drawer>
 
     <q-page-container>
@@ -599,36 +589,6 @@ const iniciales = computed(() => {
 .marca-panel__sub {
   font-size: 11.5px;
   color: #8a978d;
-}
-
-// Tarjeta de entorno académico (parte inferior del menú)
-.entorno-abajo {
-  padding-bottom: 14px;
-}
-
-.tarjeta-entorno {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 14px 16px;
-  background: #f0f7f0;
-  border: 1px solid #dbe7dc;
-  border-radius: 14px;
-  color: #2e7d32;
-  box-shadow: 0 8px 22px rgba(29, 78, 38, 0.055);
-}
-
-.tarjeta-entorno__titulo {
-  font-size: 12px;
-  font-weight: 800;
-  color: #1b5e20;
-  line-height: 1.3;
-  margin-bottom: 3px;
-}
-
-.tarjeta-entorno__sub {
-  font-size: 10.5px;
-  color: #7d8a80;
 }
 
 // --- Pie de página ------------------------------------------------------------------

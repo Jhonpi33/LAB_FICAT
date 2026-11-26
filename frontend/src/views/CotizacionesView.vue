@@ -228,38 +228,38 @@ const guardarEstado = async () => {
                 <q-icon name="tune" size="18px" class="q-mr-sm" />
                 Parámetros a cotizar
               </div>
-              <div class="q-pa-md q-gutter-sm">
-                <div v-for="(item, index) in formulario.items" :key="index" class="row items-center q-col-gutter-sm">
-                  <div class="col-12 col-sm-6">
+              <div class="cotizacion-items">
+                <div v-for="(item, index) in formulario.items" :key="index" class="cotizacion-item">
+                  <div class="cotizacion-item__parametro">
                     <q-select
                       v-model="item.parametro_id"
                       outlined dense hide-bottom-space :options="opcionesParametro" emit-value map-options label="Parámetro *"
                       :rules="[seleccionRequerida('el parámetro')]" lazy-rules
                     />
                   </div>
-                  <div class="col-6 col-sm-3">
+                  <div class="cotizacion-item__cantidad">
                     <q-input
                       v-model.number="item.cantidad"
                       outlined dense hide-bottom-space type="number" label="Cantidad *" min="1"
                       :rules="[(v) => Number(v) >= 1 || 'Mínimo 1']" lazy-rules
                     />
                   </div>
-                  <div class="col-5 col-sm-2">
+                  <div class="cotizacion-item__subtotal">
                     <div class="data-label">Subtotal</div>
                     <div class="data-value mono">{{ formatPeso(subtotalDe(item)) }}</div>
                   </div>
-                  <div class="col-1 col-sm-1 text-right">
+                  <div class="cotizacion-item__quitar">
                     <q-btn flat dense round size="sm" icon="delete_outline" color="negative" @click="quitarItem(index)">
                       <q-tooltip>Quitar</q-tooltip>
                     </q-btn>
                   </div>
                 </div>
 
-                <q-btn flat dense no-caps color="primary" icon="add" label="Agregar parámetro" @click="agregarItem" />
+                <q-btn class="cotizacion-items__agregar" flat dense no-caps color="primary" icon="add" label="Agregar parámetro" @click="agregarItem" />
               </div>
             </div>
 
-            <div class="row justify-end items-center q-gutter-x-md">
+            <div class="cotizacion-total">
               <div class="data-label q-mb-none">Total</div>
               <div class="text-h6 mono text-primary">{{ formatPeso(totalForm) }}</div>
             </div>
@@ -302,3 +302,80 @@ const guardarEstado = async () => {
     </q-dialog>
   </q-page>
 </template>
+
+<style scoped>
+.cotizacion-items {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+}
+
+.cotizacion-item {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(105px, 0.8fr) minmax(130px, 1fr) 40px;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid #dfe8df;
+  border-radius: 8px;
+  background: #fbfdfb;
+}
+
+.cotizacion-item__parametro,
+.cotizacion-item__cantidad {
+  min-width: 0;
+}
+
+.cotizacion-item__subtotal {
+  min-width: 0;
+}
+
+.cotizacion-item__subtotal .data-value {
+  overflow-wrap: anywhere;
+}
+
+.cotizacion-item__quitar {
+  display: flex;
+  justify-content: center;
+}
+
+.cotizacion-items__agregar {
+  justify-self: start;
+  margin-top: 2px;
+}
+
+.cotizacion-total {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 10px 14px;
+  border: 1px solid #dfe8df;
+  border-radius: 8px;
+  background: #f4faf4;
+}
+
+@media (max-width: 600px) {
+  .cotizacion-item {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr) 40px;
+    gap: 10px;
+    padding: 10px;
+  }
+
+  .cotizacion-item__parametro {
+    grid-column: 1 / -1;
+  }
+
+  .cotizacion-item__cantidad {
+    grid-column: 1;
+  }
+
+  .cotizacion-item__subtotal {
+    grid-column: 2;
+  }
+
+  .cotizacion-item__quitar {
+    grid-column: 3;
+  }
+}
+</style>

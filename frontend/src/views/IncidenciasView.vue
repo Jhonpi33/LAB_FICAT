@@ -340,7 +340,7 @@ const abrirRespuestas = (incidencia) => {
     </q-dialog>
 
     <!-- Respuestas -->
-    <q-dialog v-model="dialogoRespuestas">
+    <q-dialog v-model="dialogoRespuestas" persistent>
       <q-card class="dialog-card" style="width: 640px">
         <q-card-section class="bg-primary text-white row items-center no-wrap q-px-lg q-py-md">
           <q-icon name="forum" size="28px" class="q-mr-md" />

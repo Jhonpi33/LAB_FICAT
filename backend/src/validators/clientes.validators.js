@@ -46,7 +46,12 @@ const fichaRule = body('ficha')
   .isLength({ max: 30 })
   .withMessage('La ficha es demasiado larga');
 
-// El rol y la ficha son obligatorios solo cuando el cliente es interno (SENA).
+const programaRule = body('programa')
+  .optional({ values: 'falsy' })
+  .isLength({ max: 120 })
+  .withMessage('El programa es demasiado largo');
+
+// Los datos académicos requeridos dependen del rol interno.
 const rolRequeridoInternoRule = body('rol').custom((valor, { req }) => {
   if (req.body.tipo_cliente === 'interno' && !String(valor || '').trim()) {
     throw new Error('El rol es obligatorio para clientes internos');
@@ -54,9 +59,16 @@ const rolRequeridoInternoRule = body('rol').custom((valor, { req }) => {
   return true;
 });
 
-const fichaRequeridaInternoRule = body('ficha').custom((valor, { req }) => {
-  if (req.body.tipo_cliente === 'interno' && !String(valor || '').trim()) {
-    throw new Error('La ficha es obligatoria para clientes internos');
+const fichaRequeridaAprendizRule = body('ficha').custom((valor, { req }) => {
+  if (req.body.tipo_cliente === 'interno' && req.body.rol === 'aprendiz' && !String(valor || '').trim()) {
+    throw new Error('La ficha es obligatoria para aprendices');
+  }
+  return true;
+});
+
+const programaRequeridoInstructorRule = body('programa').custom((valor, { req }) => {
+  if (req.body.tipo_cliente === 'interno' && req.body.rol === 'instructor' && !String(valor || '').trim()) {
+    throw new Error('El programa es obligatorio para instructores');
   }
   return true;
 });
@@ -71,8 +83,10 @@ const crearRules = [
   tipoClienteRule,
   rolRule,
   fichaRule,
+  programaRule,
   rolRequeridoInternoRule,
-  fichaRequeridaInternoRule
+  fichaRequeridaAprendizRule,
+  programaRequeridoInstructorRule
 ];
 const editarRules = crearRules;
 

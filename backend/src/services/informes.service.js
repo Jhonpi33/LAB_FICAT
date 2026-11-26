@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import AnalisisMuestra from '../models/AnalisisMuestra.js';
 import Informe from '../models/Informe.js';
 import Muestra from '../models/Muestra.js';
 import { generarNumeroInforme } from './secuencias.service.js';
@@ -43,6 +44,13 @@ async function generar(muestraId, usuario) {
   if (muestra.estado !== 'resultados_validados') {
     throw httpError(400, 'La muestra debe tener los resultados validados para generar el informe');
   }
+
+  const [totalAnalisis, analisisSinValidar] = await Promise.all([
+    AnalisisMuestra.countDocuments({ muestra_id: muestra._id }),
+    AnalisisMuestra.countDocuments({ muestra_id: muestra._id, estado: { $ne: 'validado' } })
+  ]);
+  if (totalAnalisis === 0) throw httpError(400, 'La muestra no tiene análisis para incluir en el informe');
+  if (analisisSinValidar > 0) throw httpError(400, 'La muestra todavía tiene análisis sin validar');
 
   const anterior = await Informe.findOne({ muestra_id: muestra._id, eliminado: false }).sort({ version: -1 });
 

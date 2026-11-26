@@ -79,19 +79,29 @@ const formularioVacio = () => ({
   tipo_cliente: 'externo',
   rol: '',
   ficha: '',
+  programa: '',
 })
 const formulario = ref(formularioVacio())
 
 const esEdicion = computed(() => clienteEditando.value !== null)
 
-// Al pasar a "Externo" se limpian rol y ficha (no aplican).
+// Limpia los datos que no aplican al tipo de cliente o rol elegido.
 watch(
   () => formulario.value.tipo_cliente,
   (tipo) => {
     if (tipo !== 'interno') {
       formulario.value.rol = ''
       formulario.value.ficha = ''
+      formulario.value.programa = ''
     }
+  }
+)
+
+watch(
+  () => formulario.value.rol,
+  (rol) => {
+    if (rol !== 'aprendiz') formulario.value.ficha = ''
+    if (rol !== 'instructor') formulario.value.programa = ''
   }
 )
 
@@ -113,6 +123,7 @@ const abrirEdicion = (cliente) => {
     tipo_cliente: cliente.tipo_cliente,
     rol: cliente.rol || '',
     ficha: cliente.ficha || '',
+    programa: cliente.programa || '',
   }
   dialogo.value = true
 }
@@ -129,7 +140,12 @@ const guardar = async () => {
       direccion: formulario.value.direccion.trim(),
       tipo_cliente: formulario.value.tipo_cliente,
       rol: formulario.value.tipo_cliente === 'interno' ? formulario.value.rol : '',
-      ficha: formulario.value.tipo_cliente === 'interno' ? formulario.value.ficha.trim() : '',
+      ficha: formulario.value.tipo_cliente === 'interno' && formulario.value.rol === 'aprendiz'
+        ? formulario.value.ficha.trim()
+        : '',
+      programa: formulario.value.tipo_cliente === 'interno' && formulario.value.rol === 'instructor'
+        ? formulario.value.programa.trim()
+        : '',
     }
 
     const respuesta = esEdicion.value
@@ -261,8 +277,12 @@ const guardar = async () => {
               <template #prepend><q-icon name="badge" /></template>
             </q-select>
 
-            <!-- Solo para clientes internos (SENA): rol y ficha -->
-            <div v-if="formulario.tipo_cliente === 'interno'" class="fila-dialogo">
+            <!-- El campo adicional depende del rol interno. -->
+            <div
+              v-if="formulario.tipo_cliente === 'interno'"
+              class="fila-dialogo"
+              :class="{ 'fila-dialogo--rol-unico': !['aprendiz', 'instructor'].includes(formulario.rol) }"
+            >
               <div class="campo-dialogo">
                 <q-select
                   v-model="formulario.rol"
@@ -272,7 +292,7 @@ const guardar = async () => {
                   <template #prepend><q-icon name="assignment_ind" /></template>
                 </q-select>
               </div>
-              <div class="campo-dialogo">
+              <div v-if="formulario.rol === 'aprendiz'" class="campo-dialogo">
                 <q-input
                   v-model="formulario.ficha"
                   outlined dense bottom-slots label="Ficha *" input-class="mono"
@@ -280,6 +300,16 @@ const guardar = async () => {
                   lazy-rules
                 >
                   <template #prepend><q-icon name="tag" /></template>
+                </q-input>
+              </div>
+              <div v-else-if="formulario.rol === 'instructor'" class="campo-dialogo">
+                <q-input
+                  v-model="formulario.programa"
+                  outlined dense bottom-slots label="Programa *" maxlength="120"
+                  :rules="[(v) => String(v || '').trim() !== '' || 'El programa es obligatorio', maximo(120, 'El programa')]"
+                  lazy-rules
+                >
+                  <template #prepend><q-icon name="school" /></template>
                 </q-input>
               </div>
             </div>
@@ -319,5 +349,9 @@ const guardar = async () => {
 .campo-dialogo {
   flex: 1 1 200px;
   min-width: 0;
+}
+
+.fila-dialogo--rol-unico .campo-dialogo {
+  flex-basis: 100%;
 }
 </style>

@@ -28,7 +28,7 @@ function descargar() { return descargarPdf(ruta() + '/pdf', props.tipo + '-' + p
 </script>
 <template>
   <q-btn flat dense no-caps color="primary" icon="description" :label="titulo" @click="abrir"/>
-  <q-dialog v-model="abierto" :persistent="ocupado">
+  <q-dialog v-model="abierto" persistent>
     <q-card style="width: 820px; max-width: 95vw">
       <q-toolbar class="bg-primary text-white"><q-toolbar-title>{{ titulo }}</q-toolbar-title><q-btn v-close-popup flat round icon="close" aria-label="Cerrar" :disable="ocupado"/></q-toolbar>
       <q-linear-progress v-if="ocupado" indeterminate/>

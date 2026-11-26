@@ -71,7 +71,7 @@ function descargar() {
 </script>
 
 <template>
-  <q-dialog v-model="abierto" :persistent="ocupado">
+  <q-dialog v-model="abierto" persistent>
     <q-card class="recepcion">
       <header class="recepcion__cabecera">
         <q-icon name="description" size="34px" />

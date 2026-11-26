@@ -46,7 +46,6 @@ const error = ref(null)
 const opcionesMuestra = computed(() =>
   muestras.value
     .filter((m) => m.estado === 'resultados_validados')
-    .filter((m) => !informes.value.some((i) => i.muestra_id?._id === m._id))
     .map((m) => ({ label: `${m.codigo} · ${m.nombre_muestra}`, value: m._id })),
 )
 
@@ -72,13 +71,17 @@ onMounted(cargar)
 const dialogo = ref(false)
 const guardando = ref(false)
 const muestraSeleccionada = ref(null)
+const formularioRef = ref(null)
 
-const abrirGenerar = () => {
+const abrirGenerar = async () => {
   muestraSeleccionada.value = null
   dialogo.value = true
+  if (!cargando.value) await cargar()
 }
 
 const generar = async () => {
+  if (!muestraSeleccionada.value) return
+
   guardando.value = true
   try {
     const respuesta = await post('/informes', { muestra_id: muestraSeleccionada.value })
@@ -112,15 +115,22 @@ const cambiarEstado = async (informe) => {
 const dialogoVista = ref(false)
 const informeVisto = ref(null)
 const resultados = ref([])
+const cargandoResultados = ref(false)
+const errorResultados = ref(null)
 
 const abrirVista = async (informe) => {
   informeVisto.value = informe
   resultados.value = []
+  errorResultados.value = null
   dialogoVista.value = true
+  cargandoResultados.value = true
   try {
     resultados.value = await get(`/analisis/muestra/${informe.muestra_id?._id}`)
   } catch (e) {
+    errorResultados.value = e.mensaje
     notificarError(e)
+  } finally {
+    cargandoResultados.value = false
   }
 }
 
@@ -188,7 +198,7 @@ const descargarSimulado = () => {
     </div>
 
     <!-- Generar -->
-    <q-dialog v-model="dialogo" persistent>
+    <q-dialog v-model="dialogo" persistent @show="formularioRef?.resetValidation()">
       <q-card class="dialog-card">
         <q-card-section class="bg-primary text-white row items-center no-wrap q-px-lg q-py-md">
           <q-icon name="description" size="28px" class="q-mr-md" />
@@ -200,25 +210,35 @@ const descargarSimulado = () => {
           <q-btn v-close-popup flat round dense icon="close" color="white" />
         </q-card-section>
 
-        <q-card-section>
-          <q-select
-            v-model="muestraSeleccionada"
-            outlined dense :options="opcionesMuestra" emit-value map-options label="Muestra *"
-            :rules="[seleccionRequerida('la muestra')]" lazy-rules
-          >
-            <template #prepend><q-icon name="science" /></template>
-          </q-select>
-        </q-card-section>
+        <q-form ref="formularioRef" greedy @submit="generar">
+          <q-card-section class="informe-form-fields">
+            <q-select
+              v-model="muestraSeleccionada"
+              outlined dense hide-bottom-space :options="opcionesMuestra" emit-value map-options label="Muestra *"
+              :rules="[seleccionRequerida('la muestra')]" lazy-rules
+              :loading="cargando"
+              :disable="cargando || !opcionesMuestra.length"
+              @update:model-value="formularioRef?.resetValidation()"
+            >
+              <template #prepend><q-icon name="science" /></template>
+            </q-select>
 
-        <q-card-actions align="right" class="q-px-md q-pb-md">
-          <q-btn v-close-popup flat no-caps label="Cancelar" color="dark" class="btn-cancel" />
-          <q-btn unelevated no-caps color="primary" label="Generar" :loading="guardando" @click="generar" />
-        </q-card-actions>
+            <q-banner v-if="!cargando && !opcionesMuestra.length && !error" dense class="bg-orange-1 text-orange-10 rounded-borders">
+              <template #avatar><q-icon name="info_outline" /></template>
+              No hay muestras con resultados validados disponibles para generar un informe.
+            </q-banner>
+          </q-card-section>
+
+          <q-card-actions align="right" class="q-px-md q-pb-md">
+            <q-btn v-close-popup flat no-caps label="Cancelar" color="dark" class="btn-cancel" />
+            <q-btn unelevated no-caps type="submit" color="primary" label="Generar" :loading="guardando" :disable="cargando || !opcionesMuestra.length" />
+          </q-card-actions>
+        </q-form>
       </q-card>
     </q-dialog>
 
     <!-- Vista previa -->
-    <q-dialog v-model="dialogoVista">
+    <q-dialog v-model="dialogoVista" persistent>
       <q-card class="dialog-card" style="width: 720px">
         <q-card-section class="bg-primary text-white row items-center no-wrap q-px-lg q-py-md">
           <q-icon name="description" size="28px" class="q-mr-md" />
@@ -230,36 +250,47 @@ const descargarSimulado = () => {
           <q-btn v-close-popup flat round dense icon="close" color="white" />
         </q-card-section>
 
-        <q-card-section class="q-gutter-md">
-          <div class="row q-col-gutter-md">
-            <div class="col-6">
+        <q-card-section class="informe-preview">
+          <div class="informe-resumen">
+            <div class="informe-resumen__dato">
               <div class="data-label">Muestra</div>
               <div class="data-value mono">{{ informeVisto?.muestra_id?.codigo }}</div>
             </div>
-            <div class="col-6">
+            <div class="informe-resumen__dato">
               <div class="data-label">Cliente</div>
               <div class="data-value">{{ informeVisto?.muestra_id?.cliente_id?.nombre }}</div>
             </div>
           </div>
 
-          <div class="section-box">
+          <div class="section-box informe-resultados">
             <div class="section-box__title">
               <q-icon name="fact_check" size="18px" class="q-mr-sm" />
               Resultados
             </div>
-            <div class="q-pa-md">
-              <q-list separator>
-                <q-item v-for="item in resultados" :key="item._id">
-                  <q-item-section>
-                    <div class="text-weight-bold style-text">{{ item.parametro_id?.nombre }}</div>
-                    <div class="text-caption texto-suave">{{ item.resultado }}</div>
-                  </q-item-section>
-                  <q-item-section side>
-                    <span class="mono text-weight-bold">{{ item.valor ?? '-' }} {{ item.parametro_id?.unidad || '' }}</span>
-                  </q-item-section>
-                </q-item>
-              </q-list>
-              <div v-if="!resultados.length" class="empty-state">Sin resultados registrados.</div>
+            <q-linear-progress v-if="cargandoResultados" indeterminate color="primary" />
+            <q-banner v-else-if="errorResultados" dense class="bg-red-1 text-negative">
+              {{ errorResultados }}
+            </q-banner>
+            <div v-else-if="resultados.length" class="resultados-tabla">
+              <div class="resultados-tabla__encabezado">
+                <span>Parámetro</span>
+                <span>Resultado</span>
+                <span>Valor</span>
+              </div>
+              <div v-for="item in resultados" :key="item._id" class="resultados-tabla__fila">
+                <div class="text-weight-bold style-text resultados-tabla__parametro">
+                  {{ item.parametro_id?.nombre || 'Parámetro' }}
+                </div>
+                <div class="resultados-tabla__resultado">{{ item.resultado || '—' }}</div>
+                <div class="mono text-weight-bold resultados-tabla__valor">
+                  {{ item.valor ?? '—' }}<template v-if="item.valor !== null && item.valor !== undefined"> {{ item.parametro_id?.unidad || '' }}</template>
+                </div>
+              </div>
+            </div>
+            <div v-else class="informe-sin-resultados">
+              <q-icon name="science" size="32px" color="grey-5" />
+              <div class="text-weight-bold">No hay análisis registrados para esta muestra.</div>
+              <div class="text-caption texto-suave">Registra y valida los resultados antes de generar el informe.</div>
             </div>
           </div>
 
@@ -277,3 +308,95 @@ const descargarSimulado = () => {
     </q-dialog>
   </q-page>
 </template>
+
+<style scoped>
+.informe-form-fields {
+  display: grid;
+  gap: 12px;
+}
+
+.informe-preview {
+  display: grid;
+  gap: 14px;
+}
+
+.informe-resumen {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.informe-resumen__dato {
+  min-width: 0;
+  padding: 11px 14px;
+  border: 1px solid #dfe8df;
+  border-radius: 8px;
+  background: #fbfdfb;
+}
+
+.informe-resultados {
+  min-width: 0;
+}
+
+.resultados-tabla {
+  padding: 4px 14px;
+}
+
+.resultados-tabla__encabezado,
+.resultados-tabla__fila {
+  display: grid;
+  grid-template-columns: minmax(110px, 1fr) minmax(0, 1.5fr) minmax(80px, 0.7fr);
+  align-items: start;
+  gap: 12px;
+}
+
+.resultados-tabla__encabezado {
+  padding: 9px 4px;
+  border-bottom: 1px solid #dfe8df;
+  color: #607466;
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.resultados-tabla__fila {
+  padding: 11px 4px;
+  border-bottom: 1px solid #edf1ed;
+}
+
+.resultados-tabla__fila:last-child {
+  border-bottom: 0;
+}
+
+.resultados-tabla__parametro,
+.resultados-tabla__resultado,
+.resultados-tabla__valor {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.resultados-tabla__valor {
+  text-align: right;
+}
+
+.informe-sin-resultados {
+  display: grid;
+  justify-items: center;
+  gap: 7px;
+  padding: 24px 16px;
+  text-align: center;
+}
+
+@media (max-width: 600px) {
+  .informe-resumen {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .resultados-tabla__encabezado,
+  .resultados-tabla__fila {
+    grid-template-columns: minmax(82px, 0.9fr) minmax(0, 1.3fr) minmax(64px, 0.7fr);
+    gap: 8px;
+  }
+}
+</style>

@@ -80,13 +80,17 @@ onMounted(cargar)
 const dialogo = ref(false)
 const guardando = ref(false)
 const pagoSeleccionado = ref(null)
+const formularioRef = ref(null)
 
-const abrirGenerar = () => {
+const abrirGenerar = async () => {
   pagoSeleccionado.value = null
   dialogo.value = true
+  if (!cargando.value) await cargar()
 }
 
 const generar = async () => {
+  if (!pagoSeleccionado.value) return
+
   guardando.value = true
   try {
     const respuesta = await post('/facturas', { pago_id: pagoSeleccionado.value })
@@ -197,7 +201,7 @@ const abrirHistorial = (factura) => {
     </div>
 
     <!-- Generar -->
-    <q-dialog v-model="dialogo" persistent>
+    <q-dialog v-model="dialogo" persistent @show="formularioRef?.resetValidation()">
       <q-card class="dialog-card">
         <q-card-section class="bg-primary text-white row items-center no-wrap q-px-lg q-py-md">
           <q-icon name="receipt" size="28px" class="q-mr-md" />
@@ -209,20 +213,30 @@ const abrirHistorial = (factura) => {
           <q-btn v-close-popup flat round dense icon="close" color="white" />
         </q-card-section>
 
-        <q-card-section>
-          <q-select
-            v-model="pagoSeleccionado"
-            outlined dense :options="opcionesPago" emit-value map-options label="Pago confirmado *"
-            :rules="[seleccionRequerida('el pago')]" lazy-rules
-          >
-            <template #prepend><q-icon name="payments" /></template>
-          </q-select>
-        </q-card-section>
+        <q-form ref="formularioRef" greedy @submit="generar">
+          <q-card-section class="factura-form-fields">
+            <q-select
+              v-model="pagoSeleccionado"
+              outlined dense hide-bottom-space :options="opcionesPago" emit-value map-options label="Pago confirmado *"
+              :rules="[seleccionRequerida('el pago')]" lazy-rules
+              :loading="cargando"
+              :disable="cargando || !opcionesPago.length"
+              @update:model-value="formularioRef?.resetValidation()"
+            >
+              <template #prepend><q-icon name="payments" /></template>
+            </q-select>
 
-        <q-card-actions align="right" class="q-px-md q-pb-md">
-          <q-btn v-close-popup flat no-caps label="Cancelar" color="dark" class="btn-cancel" />
-          <q-btn unelevated no-caps color="primary" label="Generar factura" :loading="guardando" @click="generar" />
-        </q-card-actions>
+            <q-banner v-if="!cargando && !opcionesPago.length && !error" dense class="bg-orange-1 text-orange-10 rounded-borders">
+              <template #avatar><q-icon name="info_outline" /></template>
+              No hay pagos confirmados disponibles sin una factura registrada.
+            </q-banner>
+          </q-card-section>
+
+          <q-card-actions align="right" class="q-px-md q-pb-md">
+            <q-btn v-close-popup flat no-caps label="Cancelar" color="dark" class="btn-cancel" />
+            <q-btn unelevated no-caps type="submit" color="primary" label="Generar factura" :loading="guardando" :disable="cargando || !opcionesPago.length" />
+          </q-card-actions>
+        </q-form>
       </q-card>
     </q-dialog>
 
@@ -257,7 +271,7 @@ const abrirHistorial = (factura) => {
     </q-dialog>
 
     <!-- Historial -->
-    <q-dialog v-model="dialogoHistorial">
+    <q-dialog v-model="dialogoHistorial" persistent>
       <q-card class="dialog-card" style="width: 640px">
         <q-card-section class="bg-primary text-white row items-center no-wrap q-px-lg q-py-md">
           <q-icon name="history" size="28px" class="q-mr-md" />
@@ -289,3 +303,10 @@ const abrirHistorial = (factura) => {
     </q-dialog>
   </q-page>
 </template>
+
+<style scoped>
+.factura-form-fields {
+  display: grid;
+  gap: 12px;
+}
+</style>
