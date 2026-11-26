@@ -233,10 +233,10 @@ const cambiarEstado = async (usuario) => {
         </q-card-section>
 
         <q-form ref="formularioRef" greedy @submit="guardar">
-          <q-card-section class="q-gutter-md">
+          <q-card-section class="column no-wrap q-px-lg q-pt-lg q-pb-md" style="gap: 16px">
             <q-input
               v-model="formulario.nombre"
-              outlined dense label="Nombre completo *"
+              outlined dense hide-bottom-space label="Nombre completo *"
               :rules="[requerido('El nombre'), minimo(3, 'El nombre')]"
               lazy-rules
             >
@@ -245,7 +245,7 @@ const cambiarEstado = async (usuario) => {
 
             <q-input
               v-model="formulario.email"
-              outlined dense type="email" label="Email *"
+              outlined dense hide-bottom-space type="email" label="Email *"
               hint="Con este correo inicia sesión"
               autocomplete="off"
               :rules="[requerido('El email'), esEmail()]"
@@ -256,7 +256,7 @@ const cambiarEstado = async (usuario) => {
 
             <q-input
               v-model="formulario.password"
-              outlined dense label="Contraseña *"
+              outlined dense hide-bottom-space label="Contraseña *"
               autocomplete="new-password"
               :hint="esEdicion ? 'Dejar vacío para no cambiarla' : 'Mínimo 8 caracteres y un número'"
               :type="verPassword ? 'text' : 'password'"
@@ -278,7 +278,7 @@ const cambiarEstado = async (usuario) => {
             <q-input
               v-if="!esEdicion"
               v-model="formulario.confirmacion"
-              outlined dense type="password" label="Confirmar contraseña *"
+              outlined dense hide-bottom-space type="password" label="Confirmar contraseña *"
               autocomplete="new-password"
               :rules="[requerido('La confirmación'), igualA(() => formulario.password, 'Las contraseñas no coinciden')]"
               lazy-rules
@@ -289,7 +289,7 @@ const cambiarEstado = async (usuario) => {
             <q-select
               v-if="esEdicion && !esAdminSeleccionado"
               v-model="formulario.rol"
-              outlined dense
+              outlined dense hide-bottom-space
               :options="ROL_OPCIONES"
               emit-value
               map-options

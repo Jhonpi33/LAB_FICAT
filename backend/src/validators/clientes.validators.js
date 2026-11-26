@@ -36,7 +36,44 @@ const tipoClienteRule = body('tipo_cliente')
   .isIn(['interno', 'externo'])
   .withMessage('El tipo de cliente solo puede ser interno o externo');
 
-const crearRules = [nombreRule, tipoDocumentoRule, numeroDocumentoRule, emailRule, telefonoRule, direccionRule, tipoClienteRule];
+const rolRule = body('rol')
+  .optional({ values: 'falsy' })
+  .isIn(['instructor', 'aprendiz', 'administrativo'])
+  .withMessage('El rol no es válido');
+
+const fichaRule = body('ficha')
+  .optional({ values: 'falsy' })
+  .isLength({ max: 30 })
+  .withMessage('La ficha es demasiado larga');
+
+// El rol y la ficha son obligatorios solo cuando el cliente es interno (SENA).
+const rolRequeridoInternoRule = body('rol').custom((valor, { req }) => {
+  if (req.body.tipo_cliente === 'interno' && !String(valor || '').trim()) {
+    throw new Error('El rol es obligatorio para clientes internos');
+  }
+  return true;
+});
+
+const fichaRequeridaInternoRule = body('ficha').custom((valor, { req }) => {
+  if (req.body.tipo_cliente === 'interno' && !String(valor || '').trim()) {
+    throw new Error('La ficha es obligatoria para clientes internos');
+  }
+  return true;
+});
+
+const crearRules = [
+  nombreRule,
+  tipoDocumentoRule,
+  numeroDocumentoRule,
+  emailRule,
+  telefonoRule,
+  direccionRule,
+  tipoClienteRule,
+  rolRule,
+  fichaRule,
+  rolRequeridoInternoRule,
+  fichaRequeridaInternoRule
+];
 const editarRules = crearRules;
 
 export { crearRules, editarRules };

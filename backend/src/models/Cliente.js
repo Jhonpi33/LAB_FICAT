@@ -35,6 +35,18 @@ const clienteSchema = new mongoose.Schema(
       enum: { values: ['interno', 'externo'], message: 'Tipo de cliente no valido' },
       required: [true, 'El tipo de cliente es obligatorio']
     },
+    rol: {
+      type: String,
+      enum: { values: ['', 'instructor', 'aprendiz', 'administrativo'], message: 'Rol no valido' },
+      default: '',
+      required: function () { return this.tipo_cliente === 'interno'; }
+    },
+    ficha: {
+      type: String,
+      default: '',
+      maxlength: 30,
+      required: function () { return this.tipo_cliente === 'interno'; }
+    },
     eliminado: { type: Boolean, default: false },
     eliminado_por: { type: String, default: null },
     fecha_eliminacion: { type: Date, default: null }
