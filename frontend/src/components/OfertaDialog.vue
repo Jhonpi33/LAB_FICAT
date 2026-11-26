@@ -7,7 +7,7 @@ import { useNotificar } from '@/composables/useNotificar'
 const abierto = defineModel({ type: Boolean })
 const props = defineProps({ solicitud: String })
 const emit = defineEmits(['guardado'])
-const { notificarError, notificarOk } = useNotificar()
+const { notificarError, notificarOk, notificarInfo } = useNotificar()
 const ocupado = ref(false)
 const error = ref('')
 const busqueda = ref('')
@@ -76,6 +76,19 @@ async function cargarDocumento() {
 }
 function guardar() {
   ejecutar(async () => {
+    if (!clienteId.value) {
+      const documento = String(cliente.value.numero_documento || '').trim()
+      const correo = String(cliente.value.email || '').trim().toLowerCase()
+      const termino = documento || correo
+      if (termino) {
+        const encontrados = await get('/ofertas/clientes?q=' + encodeURIComponent(termino))
+        const existente = encontrados.find(c => c.numero_documento === documento || c.email === correo)
+        if (existente) {
+          seleccionar(existente)
+          notificarInfo(`${existente.nombre} ya estaba registrado. Usaremos sus datos en esta solicitud.`)
+        }
+      }
+    }
     const imagen = await new Promise((resolve,reject) => {
       const lector = new FileReader(); lector.onload = () => resolve(lector.result.split(',')[1]); lector.onerror = reject; lector.readAsDataURL(firma.value)
     })

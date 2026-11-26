@@ -14,7 +14,7 @@ import { useNotificar } from '@/composables/useNotificar'
 import { requerido, esEmail, minimo, maximo, seleccionRequerida } from '@/utils/reglas'
 
 const general = useGeneralStore()
-const { notificarOk, notificarError } = useNotificar()
+const { notificarOk, notificarError, notificarInfo } = useNotificar()
 
 const TIPO_DOC = [
   { label: 'CC - Cédula', value: 'CC' },
@@ -130,6 +130,16 @@ const guardar = async () => {
       tipo_cliente: formulario.value.tipo_cliente,
       rol: formulario.value.tipo_cliente === 'interno' ? formulario.value.rol : '',
       ficha: formulario.value.tipo_cliente === 'interno' ? formulario.value.ficha.trim() : '',
+    }
+
+    if (!esEdicion.value) {
+      const coincidencias = await get(`/clientes?q=${encodeURIComponent(datos.numero_documento)}`)
+      const existente = coincidencias.find(cliente => cliente.numero_documento === datos.numero_documento)
+      if (existente) {
+        abrirEdicion(existente)
+        notificarInfo(`${existente.nombre} ya está registrado con ese documento. Abrimos sus datos para que puedas actualizarlos.`)
+        return
+      }
     }
 
     const respuesta = esEdicion.value

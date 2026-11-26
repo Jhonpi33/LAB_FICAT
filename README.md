@@ -63,8 +63,8 @@ Abre **http://localhost:5174**.
 
 | Perfil | Correo | Contraseña |
 |---|---|---|
-| Administrador | `admin@sena.edu.co` | `Admin2026` |
-| Encargado | `lab@sena.edu.co` | `Laboratorio2026` |
+| Administrador | `admin@sena.edu.co` | `LunaTrigoPuma9352` |
+| Encargado | `lab@sena.edu.co` | `CobreMangoCobre2704` |
 | Usuario / Cliente | `lectura@sena.edu.co` | `Lectura2026` |
 
 > Se crean con `npm run seed` (en `backend/`). La primera vez también puedes correr `npm run colecciones` para crear las colecciones e índices en Atlas.

@@ -9,7 +9,7 @@ const CUENTAS = [
   {
     nombre: 'Encargado',
     email: 'lab@sena.edu.co',
-    password: 'Laboratorio2026',
+    password: 'CobreMangoCobre2704',
     rol: 'encargado',
     activo: true,
     permiso_editar: true,
@@ -18,7 +18,7 @@ const CUENTAS = [
   {
     nombre: 'Administrador',
     email: 'admin@sena.edu.co',
-    password: 'Admin2026',
+    password: 'LunaTrigoPuma9352',
     rol: 'admin',
     activo: true,
     permiso_editar: true,

@@ -259,11 +259,11 @@ const iniciarSesion = async () => {
               <div class="cuentas-demo__lista">
                 <div class="cuenta">
                   <span class="cuenta__email">admin@sena.edu.co</span>
-                  <span class="cuenta__pass">Admin2026</span>
+                  <span class="cuenta__pass">LunaTrigoPuma9352</span>
                 </div>
                 <div class="cuenta">
                   <span class="cuenta__email">lab@sena.edu.co</span>
-                  <span class="cuenta__pass">Laboratorio2026</span>
+                  <span class="cuenta__pass">CobreMangoCobre2704</span>
                 </div>
               </div>
             </div>
