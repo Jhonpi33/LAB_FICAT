@@ -35,6 +35,7 @@
 body {
   min-width: 320px;
   min-height: 100vh;
+  overflow-x: hidden;
   background:
     radial-gradient(ellipse at 8% 0%, rgba(46, 125, 50, 0.075), transparent 34rem),
     radial-gradient(ellipse at 98% 17%, rgba(38, 166, 154, 0.045), transparent 30rem),
@@ -103,7 +104,7 @@ html {
   width: 100%;
   max-width: $ancho-maximo-contenido;
   margin: 0 auto;
-  padding: clamp(22px, 3.2vw, 42px) clamp(16px, 3vw, 34px) 58px;
+  padding: clamp(6px, 0.8vw, 12px) clamp(16px, 3vw, 34px) 58px;
 }
 
 .titulo-vista {
@@ -316,6 +317,36 @@ html {
 // Inputs y selects con bordes redondeados dentro de los diálogos.
 .q-dialog .q-field--outlined .q-field__control {
   border-radius: 10px;
+}
+
+// Cuerpo de formulario en diálogos: columna con separación uniforme.
+// Úsalo en el q-card-section en lugar de `q-gutter-md` (que sumaba márgenes
+// al espacio que Quasar ya reserva bajo cada campo y dejaba huecos).
+.form-dialog {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+
+  > * {
+    width: 100%;
+    margin: 0 !important;
+  }
+
+  // Varios campos en una misma fila (5/4/3 columnas)
+  &__fila {
+    display: grid;
+    grid-template-columns: 5fr 4fr 3fr;
+    gap: 16px;
+
+    @media (max-width: 600px) {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  &__toggle {
+    justify-content: space-between;
+    padding: 0 4px;
+  }
 }
 
 // Fondo de la página ligeramente difuminado tras el diálogo.

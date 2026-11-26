@@ -42,6 +42,58 @@ const cargarPendientes = async () => {
   }
 }
 
+/**
+ * BANDEJA RÁPIDA DE LA CAMPANA:
+ * al abrir el menú se consultan las notificaciones más recientes (sin importar
+ * el estado) para mostrarlas en el cuadro estilo YouTube/Facebook.
+ */
+const notificacionesRecientes = ref([])
+const cargandoBandeja = ref(false)
+const menuNotificaciones = ref(false)
+
+const TIPO_INFO = {
+  cambio_etapa: { icono: 'swap_horiz', color: 'blue' },
+  incidencia: { icono: 'report_problem', color: 'orange' },
+  cambio_fecha: { icono: 'event', color: 'purple' },
+  resultados_disponibles: { icono: 'fact_check', color: 'green' },
+  conservacion: { icono: 'ac_unit', color: 'cyan' },
+  otro: { icono: 'mail', color: 'grey' },
+}
+
+const infoTipo = (tipo) => TIPO_INFO[tipo] || TIPO_INFO.otro
+
+const cargarBandeja = async () => {
+  if (!auth.esStaff) return
+  cargandoBandeja.value = true
+  try {
+    const lista = await get('/notificaciones')
+    notificacionesRecientes.value = lista.slice(0, 6)
+  } catch {
+    // Silencioso: el menú muestra su estado vacío.
+    notificacionesRecientes.value = []
+  } finally {
+    cargandoBandeja.value = false
+  }
+}
+
+const verTodasLasNotificaciones = () => {
+  menuNotificaciones.value = false
+  router.push({ name: 'notificaciones' })
+}
+
+/** Fecha amigable para la bandeja rápida: "Hace 5 min", "Hace 2 h"... */
+const tiempoRelativo = (fecha) => {
+  if (!fecha) return ''
+  const minutos = Math.floor((Date.now() - new Date(fecha).getTime()) / 60000)
+  if (minutos < 1) return 'Ahora'
+  if (minutos < 60) return `Hace ${minutos} min`
+  const horas = Math.floor(minutos / 60)
+  if (horas < 24) return `Hace ${horas} h`
+  const dias = Math.floor(horas / 24)
+  if (dias < 7) return `Hace ${dias} d`
+  return formatDateTime(fecha)
+}
+
 onMounted(() => {
   cargarPendientes()
   timerNotificaciones = setInterval(cargarPendientes, 30000)
@@ -119,16 +171,6 @@ const iniciales = computed(() => {
     <!-- ================= CABECERA (blanca, estilo SaaS) ================= -->
     <q-header class="cabecera">
       <q-toolbar class="q-px-md">
-        <q-btn
-          flat
-          dense
-          round
-          icon="menu"
-          aria-label="Abrir menú"
-          class="boton-menu"
-          @click="general.alternarMenu()"
-        />
-
         <q-toolbar-title class="titulo-cabecera">
           <span class="marca-cabecera">LABFICAT</span>
           <q-icon name="chevron_right" size="16px" class="separador-cabecera" />
@@ -138,7 +180,7 @@ const iniciales = computed(() => {
         <q-space />
 
         <template v-if="auth.estaAutenticado">
-          <!-- Campana de notificaciones con contador -->
+          <!-- Campana: abre la bandeja rápida (estilo YouTube/Facebook) -->
           <q-btn
             v-if="auth.esStaff"
             flat
@@ -146,11 +188,72 @@ const iniciales = computed(() => {
             round
             icon="notifications"
             aria-label="Notificaciones"
-            class="boton-menu q-mr-sm"
-            :to="{ name: 'notificaciones' }"
+            class="boton-menu q-mr-sm boton-campana"
           >
             <q-badge v-if="pendientes" floating color="negative" :label="pendientes > 99 ? '99+' : pendientes" />
-            <q-tooltip>Notificaciones pendientes</q-tooltip>
+
+            <q-menu
+              v-model="menuNotificaciones"
+              anchor="bottom right"
+              self="top right"
+              :offset="[0, 12]"
+              class="menu-notificaciones"
+              @before-show="cargarBandeja"
+            >
+              <div class="menu-notificaciones__cabecera">
+                <span class="menu-notificaciones__titulo">Notificaciones</span>
+                <q-badge v-if="pendientes" color="negative" class="q-ml-sm" :label="`${pendientes} pendiente(s)`" />
+              </div>
+
+              <q-separator />
+
+              <div v-if="cargandoBandeja" class="menu-notificaciones__estado">
+                <q-spinner color="primary" size="26px" />
+                <span>Cargando notificaciones...</span>
+              </div>
+
+              <q-list v-else-if="notificacionesRecientes.length" class="menu-notificaciones__lista">
+                <q-item v-for="notificacion in notificacionesRecientes" :key="notificacion._id" class="menu-notificaciones__item">
+                  <q-item-section avatar>
+                    <q-avatar size="38px" :color="`${infoTipo(notificacion.tipo).color}-1`" :text-color="`${infoTipo(notificacion.tipo).color}-9`">
+                      <q-icon :name="infoTipo(notificacion.tipo).icono" size="20px" />
+                    </q-avatar>
+                  </q-item-section>
+                  <q-item-section>
+                    <q-item-label class="menu-notificaciones__asunto">{{ notificacion.asunto }}</q-item-label>
+                    <q-item-label caption lines="2" class="menu-notificaciones__mensaje">
+                      {{ notificacion.mensaje }}
+                    </q-item-label>
+                    <q-item-label caption class="menu-notificaciones__fecha">
+                      {{ tiempoRelativo(notificacion.fecha_programada) }}
+                    </q-item-label>
+                  </q-item-section>
+                  <q-item-section side top>
+                    <q-badge
+                      :color="notificacion.estado === 'fallida' ? 'red-2' : notificacion.estado === 'pendiente' ? 'orange-2' : 'green-2'"
+                      :text-color="notificacion.estado === 'fallida' ? 'red-10' : notificacion.estado === 'pendiente' ? 'orange-10' : 'green-10'"
+                      :label="notificacion.estado === 'fallida' ? 'Fallida' : notificacion.estado === 'pendiente' ? 'Pendiente' : 'Enviada'"
+                    />
+                  </q-item-section>
+                </q-item>
+              </q-list>
+
+              <div v-else class="menu-notificaciones__estado menu-notificaciones__estado--vacio">
+                <q-icon name="notifications_none" size="40px" color="grey-4" />
+                <span>No hay notificaciones recientes</span>
+              </div>
+
+              <q-separator />
+
+              <q-item clickable class="menu-notificaciones__ver-todas" @click="verTodasLasNotificaciones">
+                <q-item-section class="text-center text-primary text-weight-bold">
+                  Ver todas las notificaciones
+                </q-item-section>
+                <q-item-section side>
+                  <q-icon name="arrow_forward" size="18px" color="primary" />
+                </q-item-section>
+              </q-item>
+            </q-menu>
           </q-btn>
 
           <!-- Usuario: avatar + nombre + rol -->
@@ -182,7 +285,7 @@ const iniciales = computed(() => {
     </q-header>
 
     <!-- ================= MENÚ LATERAL ================= -->
-    <q-drawer v-model="general.menuAbierto" show-if-above bordered :width="268" class="app-drawer bg-white">
+    <q-drawer :model-value="true" :breakpoint="0" bordered :width="268" class="app-drawer bg-white">
       <!-- Marca -->
       <div class="bloque-marca">
         <img :src="logoSena" alt="Logo SENA" width="40" height="40" class="q-mr-sm" />
@@ -218,7 +321,7 @@ const iniciales = computed(() => {
       </q-list>
 
       <!-- Etiqueta de entorno académico (RNF-017) -->
-      <div class="absolute-bottom q-pa-md">
+      <div class="absolute-bottom q-px-md entorno-abajo">
         <div class="tarjeta-entorno">
           <q-icon name="school" size="18px" />
           <div>
@@ -263,23 +366,41 @@ const iniciales = computed(() => {
 // Cabecera blanca limpia (estilo SaaS) + pie de página con datos del entorno.
 // =============================================================================
 
+// main.scss reserva una franja fija para el scrollbar (`scrollbar-gutter:
+// stable`); en páginas sin scroll esa franja queda vacía a la derecha de la
+// cabecera, el contenido y el pie. Aquí se desactiva para que todo llegue
+// hasta el borde (si la página sí tiene scroll, el scrollbar aparece normal).
+:global(html) {
+  scrollbar-gutter: auto;
+}
+
 // --- Cabecera ------------------------------------------------------------------
 .cabecera {
-  position: relative;
+  // OJO: NO poner `position: relative` aquí. Quasar fija la cabecera con
+  // `fixed-top`; con `relative` + `left: 268px` la cabecera se corre 268px a
+  // la derecha y la campana, el usuario y el botón de salir quedan fuera de
+  // la pantalla.
   background: rgba(255, 255, 255, 0.94);
   color: #14261a;
   border-bottom: 1px solid #e4e9e4;
-  box-shadow: 0 8px 26px rgba(25, 55, 36, 0.055);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
+}
 
-  &::after {
-    content: '';
-    position: absolute;
-    inset: auto 0 -1px;
-    height: 1px;
-    background: linear-gradient(90deg, transparent, rgba(46, 125, 50, 0.38), transparent);
-  }
+// La cabecera es fija: el espacio lo da la página (no el contenedor) para que
+// no se cuente dos veces y el contenido quede pegado en su sitio.
+:deep(.q-page-container) {
+  padding-top: 0 !important;
+  padding-left: 268px !important;
+  overflow-x: hidden;
+}
+
+:deep(.q-header) {
+  left: 268px !important;
+}
+
+:deep(.q-page) {
+  padding-top: 68px;
 }
 
 .cabecera :deep(.q-toolbar) {
@@ -331,6 +452,87 @@ const iniciales = computed(() => {
   background: #eef1ee;
 }
 
+// --- Bandeja rápida de notificaciones (campana) --------------------------------
+.menu-notificaciones {
+  width: 380px;
+  max-width: calc(100vw - 24px);
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 18px 48px rgba(20, 38, 26, 0.18);
+}
+
+.menu-notificaciones__cabecera {
+  display: flex;
+  align-items: center;
+  padding: 14px 18px;
+  background: #fff;
+}
+
+.menu-notificaciones__titulo {
+  font-size: 15px;
+  font-weight: 800;
+  color: #14261a;
+}
+
+.menu-notificaciones__lista {
+  max-height: 360px;
+  overflow-y: auto;
+  padding: 4px 0;
+}
+
+.menu-notificaciones__item {
+  align-items: flex-start;
+  padding: 10px 16px;
+
+  &:hover {
+    background: #f4f9f4;
+  }
+}
+
+.menu-notificaciones__asunto {
+  font-size: 13px;
+  font-weight: 700;
+  color: #1c2b20;
+  white-space: normal;
+  line-height: 1.3;
+}
+
+.menu-notificaciones__mensaje {
+  font-size: 12px;
+  color: #6c7a6f;
+  margin-top: 2px;
+}
+
+.menu-notificaciones__fecha {
+  font-size: 11px;
+  color: #93a096;
+  margin-top: 4px;
+}
+
+.menu-notificaciones__estado {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 28px 18px;
+  font-size: 13px;
+  color: #8a978d;
+}
+
+.menu-notificaciones__estado--vacio {
+  padding: 34px 18px;
+}
+
+.menu-notificaciones__ver-todas {
+  padding: 12px 16px;
+  color: #2e7d32;
+
+  &:hover {
+    background: #edf7ee;
+  }
+}
+
 // Usuario en la cabecera
 .usuario {
   display: flex;
@@ -375,11 +577,10 @@ const iniciales = computed(() => {
 .bloque-marca {
   display: flex;
   align-items: center;
-  padding: 20px 18px;
-  background:
-    radial-gradient(circle at 0 0, rgba(98, 175, 109, 0.14), transparent 58%),
-    linear-gradient(135deg, #f5faf5, #ffffff 74%);
-  border-bottom: 1px solid #eef1ee;
+  height: 69px;
+  padding: 0 18px;
+  background: #fff;
+  border-bottom: 1px solid #e4e9e4;
 }
 
 .marca-panel {
@@ -401,11 +602,15 @@ const iniciales = computed(() => {
 }
 
 // Tarjeta de entorno académico (parte inferior del menú)
+.entorno-abajo {
+  padding-bottom: 14px;
+}
+
 .tarjeta-entorno {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 10px 12px;
+  gap: 12px;
+  padding: 14px 16px;
   background: #f0f7f0;
   border: 1px solid #dbe7dc;
   border-radius: 14px;
@@ -417,7 +622,8 @@ const iniciales = computed(() => {
   font-size: 12px;
   font-weight: 800;
   color: #1b5e20;
-  line-height: 1.2;
+  line-height: 1.3;
+  margin-bottom: 3px;
 }
 
 .tarjeta-entorno__sub {

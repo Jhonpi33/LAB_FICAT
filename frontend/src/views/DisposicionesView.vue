@@ -145,10 +145,10 @@ const guardar = async () => {
           <q-btn v-close-popup flat round dense icon="close" color="white" />
         </q-card-section>
 
-        <q-card-section class="q-gutter-md">
+        <q-card-section class="column no-wrap q-px-lg q-pt-lg q-pb-md" style="gap: 16px">
           <q-select
             v-model="formulario.muestra_id"
-            outlined dense :options="opcionesMuestra" emit-value map-options label="Muestra *"
+            outlined dense hide-bottom-space :options="opcionesMuestra" emit-value map-options label="Muestra *"
             :rules="[seleccionRequerida('la muestra')]" lazy-rules
           >
             <template #prepend><q-icon name="science" /></template>
@@ -156,22 +156,22 @@ const guardar = async () => {
 
           <q-select
             v-model="formulario.tipo"
-            outlined dense :options="TIPOS" emit-value map-options label="Tipo de salida *"
+            outlined dense hide-bottom-space :options="TIPOS" emit-value map-options label="Tipo de salida *"
             :rules="[seleccionRequerida('el tipo')]" lazy-rules
           />
 
           <q-input
             v-model="formulario.motivo"
-            type="textarea" outlined label="Motivo *" rows="2"
+            type="textarea" outlined hide-bottom-space label="Motivo *" rows="2"
             :rules="[requerido('El motivo')]" lazy-rules
           />
 
           <q-input
             v-model="formulario.observacion"
-            type="textarea" outlined label="Observación" rows="2"
+            type="textarea" outlined hide-bottom-space label="Observación" rows="2"
           />
 
-          <q-toggle v-model="formulario.notificacion_cliente" label="Notificar al cliente (correo simulado)" color="primary" left-label />
+          <q-toggle v-model="formulario.notificacion_cliente" label="Notificar al cliente (correo simulado)" color="primary" left-label class="self-start" />
         </q-card-section>
 
         <q-card-actions align="right" class="q-px-md q-pb-md">

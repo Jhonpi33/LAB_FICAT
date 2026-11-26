@@ -317,11 +317,11 @@ const estadoLabel = (e) => ESTADOS.find((x) => x.value === e)?.label || e
         </q-card-section>
 
         <q-form ref="formularioRef" greedy @submit="guardar">
-          <q-card-section class="q-gutter-md">
+          <q-card-section class="form-solicitud q-px-lg q-pt-lg q-pb-md">
             <q-select
               v-if="!esEdicion"
               v-model="formulario.cliente_id"
-              outlined dense :options="opcionesCliente" emit-value map-options
+              outlined hide-bottom-space :options="opcionesCliente" emit-value map-options
               label="Cliente *" hint="El tipo (interno/externo) se toma del cliente"
               :rules="[seleccionRequerida('el cliente')]" lazy-rules
             >
@@ -330,22 +330,26 @@ const estadoLabel = (e) => ESTADOS.find((x) => x.value === e)?.label || e
 
             <q-input
               v-model="formulario.descripcion"
-              type="textarea" outlined label="Descripción del análisis *" rows="3"
+              type="textarea" outlined hide-bottom-space label="Descripción del análisis *" rows="3"
               :rules="[requerido('La descripción')]" lazy-rules
             />
 
             <q-select
               v-model="formulario.prioridad"
-              outlined dense :options="PRIORIDADES" emit-value map-options label="Prioridad *"
+              outlined hide-bottom-space :options="PRIORIDADES" emit-value map-options label="Prioridad *"
               :rules="[seleccionRequerida('la prioridad')]" lazy-rules
             />
 
-            <q-toggle v-model="formulario.atencion_inmediata" label="Atención inmediata" color="primary" left-label />
+            <q-toggle
+              v-model="formulario.atencion_inmediata"
+              label="Atención inmediata" color="primary" left-label
+              class="form-solicitud__toggle"
+            />
 
             <q-input
               v-if="formulario.atencion_inmediata"
               v-model="formulario.motivo_atencion_inmediata"
-              type="textarea" outlined label="Motivo de la atención inmediata" rows="2"
+              type="textarea" outlined hide-bottom-space label="Motivo de la atención inmediata" rows="2"
             />
           </q-card-section>
 
@@ -388,6 +392,31 @@ const estadoLabel = (e) => ESTADOS.find((x) => x.value === e)?.label || e
 </template>
 
 <style scoped lang="scss">
+// Formulario del diálogo: columna con separación uniforme entre campos
+// (sin q-gutter, que sumaba márgenes al espacio reservado de cada campo).
+.form-solicitud {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+
+  // Campos y toggle ocupan todo el ancho, sin márgenes propios
+  > * {
+    width: 100%;
+    margin: 0 !important;
+  }
+
+  // Etiqueta e interruptor juntos (sin estirarse a todo el ancho del formulario)
+  &__toggle {
+    width: fit-content;
+    align-self: flex-start;
+    padding: 0 4px;
+
+    :deep(.q-toggle__label) {
+      padding-right: 12px;
+    }
+  }
+}
+
 // Píldoras de resumen por estado (clic = filtrar)
 .resumen {
   display: flex;

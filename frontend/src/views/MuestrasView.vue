@@ -59,7 +59,13 @@ const columnas = [
   { name: 'recepcion', label: 'Recepción', field: 'estado_recepcion', align: 'center', sortable: true },
   { name: 'estado', label: 'Estado', field: 'estado', align: 'center', sortable: true },
   { name: 'fecha', label: 'Recibida', field: 'fecha_recepcion', align: 'left', sortable: true, format: (v) => formatDate(v) },
-  { name: 'acciones', label: 'Acciones', field: 'acciones', align: 'right' },
+  // Ancho mínimo explícito (encabezado y celdas) para que la columna cubra todos
+  // sus botones y las líneas de la tabla lleguen hasta el final.
+  {
+    name: 'acciones', label: 'Acciones', field: 'acciones', align: 'right',
+    style: 'min-width: 580px; white-space: nowrap',
+    headerStyle: 'min-width: 580px; white-space: nowrap',
+  },
 ]
 
 const muestras = ref([])
@@ -265,7 +271,7 @@ const avanzarEtapa = async (muestra) => {
         </template>
 
         <template #body-cell-acciones="celda">
-          <q-td :props="celda" class="text-right">
+          <q-td :props="celda" class="text-right celda-acciones">
             <q-btn flat dense no-caps color="primary" icon="draw" label="Recepción y firma" @click="abrirFormato(celda.row)" />
             <q-btn v-if="!celda.row.confirmacion_enviada" flat dense round icon="mail_outline" color="primary"
               aria-label="Enviar confirmación de registro" :loading="enviandoConfirmacion === celda.row._id"
@@ -290,7 +296,15 @@ const avanzarEtapa = async (muestra) => {
               >
                 <q-tooltip>Pasar a {{ ETAPA_LABEL[ETAPA_SIGUIENTE[celda.row.estado]] }}</q-tooltip>
               </q-btn>
-              <span v-else class="text-caption texto-suave">—</span>
+              <template v-else>
+                <!-- Sin etapa siguiente: mismos botones que las demás filas, en gris y deshabilitados -->
+                <q-btn flat dense round size="sm" icon="check" color="grey-5" disable class="action-secondary">
+                  <q-tooltip>Recepción ya {{ celda.row.estado_recepcion }}</q-tooltip>
+                </q-btn>
+                <q-btn flat dense round size="sm" icon="close" color="grey-5" disable class="action-secondary">
+                  <q-tooltip>Recepción ya {{ celda.row.estado_recepcion }}</q-tooltip>
+                </q-btn>
+              </template>
             </template>
           </q-td>
         </template>
@@ -313,10 +327,10 @@ const avanzarEtapa = async (muestra) => {
         </q-card-section>
 
         <q-form ref="formularioRef" greedy @submit="guardar">
-          <q-card-section class="q-gutter-md">
+          <q-card-section class="form-dialog q-px-lg q-pt-lg q-pb-md">
             <q-select
               v-model="formulario.solicitud_id"
-              outlined dense :options="opcionesSolicitud" emit-value map-options label="Solicitud *"
+              outlined hide-bottom-space :options="opcionesSolicitud" emit-value map-options label="Solicitud *"
               :rules="[seleccionRequerida('la solicitud')]" lazy-rules
             >
               <template #prepend><q-icon name="assignment" /></template>
@@ -324,33 +338,33 @@ const avanzarEtapa = async (muestra) => {
 
             <q-input
               v-model="formulario.nombre_muestra"
-              outlined dense label="Nombre de la muestra *"
+              outlined hide-bottom-space label="Nombre de la muestra *"
               :rules="[requerido('El nombre de la muestra')]" lazy-rules
             />
 
             <q-input
               v-model="formulario.descripcion"
-              type="textarea" outlined label="Descripción del alimento *" rows="2"
+              type="textarea" outlined hide-bottom-space label="Descripción del alimento *" rows="2"
               :rules="[requerido('La descripción')]" lazy-rules
             />
 
-            <div class="row q-col-gutter-md">
-              <div class="col-12 col-sm-5">
+            <div class="form-dialog__fila">
+              <div>
                 <q-select
                   v-model="formulario.tipo_fisico"
-                  outlined dense :options="TIPO_FISICO" emit-value map-options label="Tipo físico *"
+                  outlined hide-bottom-space :options="TIPO_FISICO" emit-value map-options label="Tipo físico *"
                   :rules="[seleccionRequerida('el tipo físico')]" lazy-rules
                 />
               </div>
-              <div class="col-12 col-sm-4">
+              <div>
                 <q-input
                   v-model.number="formulario.cantidad"
-                  outlined dense type="number" label="Cantidad *" step="any"
+                  outlined hide-bottom-space type="number" label="Cantidad *" step="any"
                   :rules="[requerido('La cantidad'), enteroMayorA(-1, 'La cantidad')]" lazy-rules
                 />
               </div>
-              <div class="col-12 col-sm-3">
-                <q-input v-model="formulario.unidad" outlined dense label="Unidad" readonly />
+              <div>
+                <q-input v-model="formulario.unidad" outlined hide-bottom-space label="Unidad" readonly />
               </div>
             </div>
 
@@ -361,13 +375,14 @@ const avanzarEtapa = async (muestra) => {
 
             <q-select
               v-model="formulario.parametros_ids"
-              outlined dense multiple use-chips :options="opcionesParametro" emit-value map-options
+              outlined hide-bottom-space multiple use-chips :options="opcionesParametro" emit-value map-options
               label="Parámetros a analizar" hint="Opcional: se pueden asignar luego"
             >
               <template #prepend><q-icon name="tune" /></template>
             </q-select>
 
-            <q-toggle v-model="formulario.verificacion_fisica" label="Verificación física completada" color="primary" left-label />
+            <q-toggle v-model="formulario.verificacion_fisica" label="Verificación física completada" color="primary" left-label
+              class="form-dialog__toggle" />
           </q-card-section>
 
           <q-card-actions align="right" class="q-px-md q-pb-md">
@@ -407,3 +422,42 @@ const avanzarEtapa = async (muestra) => {
     </q-dialog>
   </q-page>
 </template>
+
+<style scoped lang="scss">
+// Formulario del diálogo: columna con separación uniforme entre campos.
+// (Estilos locales para que no dependan de ningún otro archivo.)
+.form-dialog {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+
+  > * {
+    width: 100%;
+    margin: 0 !important;
+  }
+
+  // Tipo físico / Cantidad / Unidad en una sola fila
+  &__fila {
+    display: grid;
+    grid-template-columns: 5fr 4fr 3fr;
+    gap: 16px;
+
+    @media (max-width: 600px) {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  &__toggle {
+    justify-content: space-between;
+    padding: 0 4px;
+  }
+}
+
+// Columna de acciones: se ajusta al ancho de sus botones (sin saltar de línea),
+// así el borde de la celda cubre todos los botones y las líneas de la tabla
+// llegan hasta el final en lugar de cortarse.
+.celda-acciones {
+  width: 1%;
+  white-space: nowrap;
+}
+</style>

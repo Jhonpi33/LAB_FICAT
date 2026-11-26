@@ -181,29 +181,29 @@ const cambiarActivo = async (parametro) => {
         </q-card-section>
 
         <q-form ref="formularioRef" greedy @submit="guardar">
-          <q-card-section class="q-gutter-md">
+          <q-card-section class="form-dialog q-px-lg q-pt-lg q-pb-md">
             <q-input
               v-model="formulario.nombre"
-              outlined dense label="Nombre del parámetro *"
+              outlined hide-bottom-space label="Nombre del parámetro *"
               :rules="[requerido('El nombre'), maximo(100, 'El nombre')]" lazy-rules
             >
               <template #prepend><q-icon name="science" /></template>
             </q-input>
 
-            <q-input v-model="formulario.descripcion" type="textarea" outlined label="Descripción" rows="2" />
+            <q-input v-model="formulario.descripcion" type="textarea" outlined hide-bottom-space label="Descripción" rows="2" />
 
-            <div class="row q-col-gutter-md">
-              <div class="col-12 col-sm-7">
+            <div class="form-dialog__fila">
+              <div>
                 <q-input
                   v-model.number="formulario.precio"
-                  outlined dense type="number" label="Precio (COP) *" step="any"
+                  outlined hide-bottom-space type="number" label="Precio (COP) *" step="any"
                   :rules="[requerido('El precio'), enteroMayorA(-1, 'El precio')]" lazy-rules
                 >
                   <template #prepend><q-icon name="payments" /></template>
                 </q-input>
               </div>
-              <div class="col-12 col-sm-5">
-                <q-input v-model="formulario.unidad" outlined dense label="Unidad" hint="Ej: %, mg, pH" />
+              <div>
+                <q-input v-model="formulario.unidad" outlined hide-bottom-space label="Unidad" hint="Ej: %, mg, pH" />
               </div>
             </div>
           </q-card-section>
@@ -221,3 +221,29 @@ const cambiarActivo = async (parametro) => {
     </q-dialog>
   </q-page>
 </template>
+
+<style scoped lang="scss">
+// Formulario del diálogo: columna con separación uniforme entre campos.
+.form-dialog {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+
+  > * {
+    width: 100%;
+    margin: 0 !important;
+  }
+
+  // Precio y Unidad en una sola fila
+  &__fila {
+    display: grid;
+    grid-template-columns: 7fr 5fr;
+    gap: 16px;
+    align-items: start;
+
+    @media (max-width: 600px) {
+      grid-template-columns: 1fr;
+    }
+  }
+}
+</style>
